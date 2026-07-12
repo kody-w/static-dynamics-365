@@ -1,0 +1,30 @@
+# Static Dynamics 365
+
+> Deterministic, zero-dependency Dataverse and Customer Service simulator.
+
+Canonical documentation: README.md
+Explicit boundaries: LIMITATIONS.md
+Security policy: SECURITY.md
+Contribution rules: CONTRIBUTING.md
+License: LICENSE (MIT)
+
+Key implementation:
+- site/twin-core.mjs: importable deterministic fetch-like runtime
+- site/app-helpers.mjs: pure UI state, view, dashboard, relationship, and lifecycle helpers
+- site/app.mjs: browser Customer Service Hub
+- data/source.json: deterministic synthetic source
+- build.py: Python standard-library generator and validator
+- site/api/data/v9.2/: read-only OData-shaped JSON fixtures
+- tests/: Node built-in and Python unittest coverage
+
+Boundary:
+- Hosted JSON is read-only.
+- Queries, writes, faults, retries, concurrency, virtual time, reset, export, and replay execute only
+  in an injected TwinCore instance.
+- Data is fictional and uses .example domains, reserved 555 phone numbers, and a fixed UTC epoch.
+- The runtime has no dependencies, telemetry, third-party requests, backend, or durable storage.
+
+Primary validation:
+python3 build.py --check
+node --test tests/*.test.mjs
+python3 -m unittest discover -s tests -p 'test_*.py' -v

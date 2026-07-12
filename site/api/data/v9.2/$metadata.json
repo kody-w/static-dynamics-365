@@ -1,0 +1,745 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata",
+  "entitySets": [
+    {
+      "count": 12,
+      "entityType": "StaticDynamics365.account",
+      "key": "accountid",
+      "name": "accounts",
+      "properties": [
+        {
+          "name": "accountid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "accountnumber",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "address1_city",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "address1_country",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "address1_line1",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "address1_postalcode",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "address1_stateorprovince",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "createdon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "description",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "emailaddress1",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "industrycode",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "modifiedon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "name",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "ownerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "owneridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "primarycontactid",
+          "nullable": true,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "primarycontactidname",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "statecode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statuscode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "telephone1",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "websiteurl",
+          "nullable": true,
+          "type": "Edm.String"
+        }
+      ]
+    },
+    {
+      "count": 40,
+      "entityType": "StaticDynamics365.connection",
+      "key": "connectionid",
+      "name": "connections",
+      "properties": [
+        {
+          "name": "connectionid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "connectionpairid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "createdon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "description",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "effectiveend",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "effectivestart",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "modifiedon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "ownerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "owneridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "record1id",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "record1idname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "record1roleidname",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "record1type",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "record2id",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "record2idname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "record2roleidname",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "record2type",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "statecode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statuscode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        }
+      ]
+    },
+    {
+      "count": 30,
+      "entityType": "StaticDynamics365.contact",
+      "key": "contactid",
+      "name": "contacts",
+      "properties": [
+        {
+          "name": "address1_city",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "address1_stateorprovince",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "contactid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "createdon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "emailaddress1",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "firstname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "fullname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "jobtitle",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "lastname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "modifiedon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "ownerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "owneridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "parentcustomerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "parentcustomeridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "preferredcontactmethodcode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statecode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statuscode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "telephone1",
+          "nullable": true,
+          "type": "Edm.String"
+        }
+      ]
+    },
+    {
+      "count": 60,
+      "entityType": "StaticDynamics365.email",
+      "key": "activityid",
+      "name": "emails",
+      "properties": [
+        {
+          "name": "activityid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "createdon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "description",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "directioncode",
+          "nullable": false,
+          "type": "Edm.Boolean"
+        },
+        {
+          "name": "fromaddress",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "fromname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "modifiedon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "ownerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "owneridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "recipientid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "recipientidname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "recipientidtype",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "regardingobjectid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "regardingobjectidname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "regardingobjectidtype",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "scheduledstart",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "senderid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "senderidname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "senderidtype",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "senton",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "statecode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statuscode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "subject",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "toaddress",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "toname",
+          "nullable": false,
+          "type": "Edm.String"
+        }
+      ]
+    },
+    {
+      "count": 24,
+      "entityType": "StaticDynamics365.incident",
+      "key": "incidentid",
+      "name": "incidents",
+      "properties": [
+        {
+          "name": "caseorigincode",
+          "nullable": false,
+          "options": [
+            {
+              "label": "Phone",
+              "value": 1
+            },
+            {
+              "label": "Email",
+              "value": 2
+            },
+            {
+              "label": "Web",
+              "value": 3
+            }
+          ],
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "casetypecode",
+          "nullable": false,
+          "options": [
+            {
+              "label": "Question",
+              "value": 1
+            },
+            {
+              "label": "Problem",
+              "value": 2
+            },
+            {
+              "label": "Request",
+              "value": 3
+            }
+          ],
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "createdon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "customerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "customeridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "customeridtype",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "description",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "firstresponsesenton",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "incidentid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "modifiedon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "ownerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "owneridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "primarycontactid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "primarycontactidname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "prioritycode",
+          "nullable": false,
+          "options": [
+            {
+              "label": "High",
+              "value": 1
+            },
+            {
+              "label": "Normal",
+              "value": 2
+            },
+            {
+              "label": "Low",
+              "value": 3
+            }
+          ],
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "resolveby",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "resolvedon",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "statecode",
+          "nullable": false,
+          "options": [
+            {
+              "label": "Active",
+              "value": 0
+            },
+            {
+              "label": "Resolved",
+              "value": 1
+            },
+            {
+              "label": "Canceled",
+              "value": 2
+            }
+          ],
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statuscode",
+          "nullable": false,
+          "options": [
+            {
+              "label": "In Progress",
+              "value": 1
+            },
+            {
+              "label": "On Hold",
+              "value": 2
+            },
+            {
+              "label": "Waiting for Details",
+              "value": 3
+            },
+            {
+              "label": "Researching",
+              "value": 4
+            },
+            {
+              "label": "Problem Solved",
+              "value": 5
+            },
+            {
+              "label": "Information Provided",
+              "value": 1000
+            },
+            {
+              "label": "Canceled",
+              "value": 6
+            },
+            {
+              "label": "Merged",
+              "value": 2000
+            }
+          ],
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "ticketnumber",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "title",
+          "nullable": false,
+          "type": "Edm.String"
+        }
+      ]
+    },
+    {
+      "count": 36,
+      "entityType": "StaticDynamics365.task",
+      "key": "activityid",
+      "name": "tasks",
+      "properties": [
+        {
+          "name": "activityid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "actualend",
+          "nullable": true,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "createdon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "description",
+          "nullable": true,
+          "type": "Edm.String"
+        },
+        {
+          "name": "modifiedon",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "ownerid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "owneridname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "percentcomplete",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "prioritycode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "regardingobjectid",
+          "nullable": false,
+          "type": "Edm.Guid"
+        },
+        {
+          "name": "regardingobjectidname",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "regardingobjectidtype",
+          "nullable": false,
+          "type": "Edm.String"
+        },
+        {
+          "name": "scheduledend",
+          "nullable": false,
+          "type": "Edm.DateTimeOffset"
+        },
+        {
+          "name": "statecode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "statuscode",
+          "nullable": false,
+          "type": "Edm.Int32"
+        },
+        {
+          "name": "subject",
+          "nullable": false,
+          "type": "Edm.String"
+        }
+      ]
+    }
+  ],
+  "namespace": "StaticDynamics365",
+  "version": "9.2"
+}

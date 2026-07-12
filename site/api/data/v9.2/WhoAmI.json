@@ -1,0 +1,9 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#Microsoft.Dynamics.CRM.WhoAmIResponse",
+  "BusinessUnitId": "cd3284c6-4e2b-5595-8bda-d2dd19e03b69",
+  "FullName": "Jordan Lee",
+  "OrganizationId": "f1e3763d-577e-5aad-86b4-e965aa58d196",
+  "OrganizationUrl": "https://crm.asterlane.example",
+  "UserId": "be4368f9-2d8f-5a72-aad0-7e400a346005",
+  "Version": "9.2.26011.15"
+}

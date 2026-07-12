@@ -1,0 +1,69 @@
+{
+  "counts": {
+    "accounts": 12,
+    "connections": 40,
+    "contacts": 30,
+    "emails": 60,
+    "incidents": 24,
+    "tasks": 36
+  },
+  "epoch": "2026-01-15T12:00:00.000Z",
+  "files": [
+    {
+      "bytes": 16954,
+      "count": null,
+      "path": "api/data/v9.2/$metadata.json",
+      "sha256": "9878f539ea568e0a2d96a1ee56a0b7e69e17c59f8f7df2f08fc991e566fa4b2f"
+    },
+    {
+      "bytes": 401,
+      "count": null,
+      "path": "api/data/v9.2/WhoAmI.json",
+      "sha256": "7056ed87170c582c7f56576e42b1fb8cbd2cf08f5780547442160d0c99bebc44"
+    },
+    {
+      "bytes": 14433,
+      "count": 12,
+      "path": "api/data/v9.2/accounts.json",
+      "sha256": "a40888bedba63c8cb23d24a26f9254df078f93958ea2206e8cf3f9c4537d596c"
+    },
+    {
+      "bytes": 45715,
+      "count": 40,
+      "path": "api/data/v9.2/connections.json",
+      "sha256": "a983251d3316b9832e6427418c0026f3aa04801d1f3fb73dd570acedfddbadd7"
+    },
+    {
+      "bytes": 29600,
+      "count": 30,
+      "path": "api/data/v9.2/contacts.json",
+      "sha256": "765f493eed7343875f49949747082d9c7aaf695575428510cd519a23bcef2511"
+    },
+    {
+      "bytes": 95419,
+      "count": 60,
+      "path": "api/data/v9.2/emails.json",
+      "sha256": "c5e0477f2762452e32ac804a3ec3ef76a7331d3115bec94687f4c450faa489c1"
+    },
+    {
+      "bytes": 39837,
+      "count": 24,
+      "path": "api/data/v9.2/incidents.json",
+      "sha256": "241ae6dd8cd089f353104df4bd5c13e4e19b9c47e74631c14ef37214f8dd9451"
+    },
+    {
+      "bytes": 35681,
+      "count": 36,
+      "path": "api/data/v9.2/tasks.json",
+      "sha256": "0dbc4c331639344113c8eba13955f9bde6422b7062df379cb6f9deffa8472536"
+    },
+    {
+      "bytes": 290558,
+      "count": null,
+      "path": "data/seed.json",
+      "sha256": "e8b7b175ffcef7bc0dbbb9cbb0ec9e3016cb1d3b905f7089c89700ecaf70d09c"
+    }
+  ],
+  "generatedFrom": "data/source.json",
+  "schemaVersion": 1
+}

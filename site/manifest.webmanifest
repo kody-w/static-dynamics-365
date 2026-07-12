@@ -1,0 +1,10 @@
+{
+  "background_color": "#ffffff",
+  "description": "Deterministic customer service and Dataverse simulation.",
+  "display": "standalone",
+  "name": "Static Dynamics 365",
+  "scope": "./",
+  "short_name": "Static D365",
+  "start_url": "./",
+  "theme_color": "#17324d"
+}

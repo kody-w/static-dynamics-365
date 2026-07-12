@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify generated fixtures
+        run: python3 build.py --check
+      - name: Check module syntax
+        run: |
+          node --check site/twin-core.mjs
+          node --check site/app-helpers.mjs
+          node --check site/app.mjs
+      - name: Run Node tests
+        run: node --test tests/*.test.mjs
+      - name: Run Python tests
+        run: python3 -m unittest discover -s tests -p 'test_*.py' -v

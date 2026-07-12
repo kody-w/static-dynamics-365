@@ -1,0 +1,13 @@
+{
+  "apiVersion": "v9.2",
+  "buildCommand": "python3 build.py",
+  "description": "Deterministic, zero-dependency Dataverse and Customer Service simulator.",
+  "license": "MIT",
+  "name": "Static Dynamics 365",
+  "runtime": {
+    "dependencies": 0,
+    "entry": "site/index.html",
+    "module": "site/twin-core.mjs"
+  },
+  "schemaVersion": 1
+}
