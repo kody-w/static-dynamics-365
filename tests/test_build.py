@@ -45,19 +45,15 @@ class BuildTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("verified 12 deterministic generated files", result.stdout)
+        self.assertIn(
+            f"verified {len(build.build_outputs(build.load_source()))} deterministic generated files",
+            result.stdout,
+        )
 
     def test_exact_counts_and_distributions(self) -> None:
         self.assertEqual(
             {name: len(records) for name, records in self.entities.items()},
-            {
-                "accounts": 12,
-                "connections": 40,
-                "contacts": 30,
-                "emails": 60,
-                "incidents": 24,
-                "tasks": 36,
-            },
+            build.EXPECTED_COUNTS,
         )
         incidents = self.entities["incidents"]
         self.assertEqual(
@@ -155,14 +151,16 @@ class BuildTests(unittest.TestCase):
         )
         for entity, records in self.entities.items():
             for record in records:
-                self.assertIn(
-                    (record["statecode"], record["statuscode"]),
-                    build.STATUS_PAIRS[entity],
-                )
+                if build.STATUS_PAIRS[entity]:
+                    self.assertIn(
+                        (record["statecode"], record["statuscode"]),
+                        build.STATUS_PAIRS[entity],
+                    )
                 for field in build.DATE_FIELDS:
                     if field in record and record[field] is not None:
                         self.assertRegex(record[field], explicit)
-                self.assertIn(record["ownerid"], identities)
+                if "ownerid" in record:
+                    self.assertIn(record["ownerid"], identities)
         for contact in self.entities["contacts"]:
             self.assertIn(contact["parentcustomerid"], ids["accounts"])
         for incident in self.entities["incidents"]:

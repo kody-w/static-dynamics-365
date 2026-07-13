@@ -1,0 +1,70 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#msdyn_incidenttypes",
+  "@odata.count": 4,
+  "value": [
+    {
+      "@odata.etag": "W/\"55608dc03cc65fb8687bcd6d\"",
+      "createdon": "2025-07-22T09:00:00.000Z",
+      "modifiedon": "2025-07-22T14:00:00.000Z",
+      "msdyn_description": "Install and configure equipment",
+      "msdyn_estimatedduration": 150,
+      "msdyn_incidenttypeid": "00656c9b-4b83-52b2-a3af-38a1e308167e",
+      "msdyn_name": "Installation",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"facc28b0e1554a9e7e8532a2\"",
+      "createdon": "2025-07-21T10:00:00.000Z",
+      "modifiedon": "2025-07-21T14:00:00.000Z",
+      "msdyn_description": "Routine equipment service",
+      "msdyn_estimatedduration": 120,
+      "msdyn_incidenttypeid": "660c236b-7559-527f-aa3e-bb87d17fb389",
+      "msdyn_name": "Preventive maintenance",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"f2cd6dfb9d44daa217ca226a\"",
+      "createdon": "2025-07-20T11:00:00.000Z",
+      "modifiedon": "2025-07-20T14:00:00.000Z",
+      "msdyn_description": "Diagnose document scanner",
+      "msdyn_estimatedduration": 75,
+      "msdyn_incidenttypeid": "b71aa2e3-3c11-56a8-9b5a-6b6740afc0c6",
+      "msdyn_name": "Scanner fault",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"c63d3efaacbaee97db2ebc19\"",
+      "createdon": "2025-07-19T12:00:00.000Z",
+      "modifiedon": "2025-07-19T14:00:00.000Z",
+      "msdyn_description": "Diagnose and restore printer",
+      "msdyn_estimatedduration": 90,
+      "msdyn_incidenttypeid": "ced1ccd6-671a-52ba-b527-c6748a599bee",
+      "msdyn_name": "Printer fault",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    }
+  ]
+}

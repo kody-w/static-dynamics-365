@@ -1,0 +1,54 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#msdyn_priorities",
+  "@odata.count": 3,
+  "value": [
+    {
+      "@odata.etag": "W/\"656ace73beb3c857477e4d80\"",
+      "createdon": "2025-07-21T10:00:00.000Z",
+      "modifiedon": "2025-07-21T14:00:00.000Z",
+      "msdyn_description": "Non-urgent request",
+      "msdyn_levelofimportance": 9,
+      "msdyn_name": "Low",
+      "msdyn_priorityid": "9c92dc3c-3ffb-503d-a50c-856632f28ad0",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"31c97fe3b898c591937ac16c\"",
+      "createdon": "2025-07-20T11:00:00.000Z",
+      "modifiedon": "2025-07-20T14:00:00.000Z",
+      "msdyn_description": "Standard service priority",
+      "msdyn_levelofimportance": 5,
+      "msdyn_name": "Normal",
+      "msdyn_priorityid": "b916ace8-6fe6-537c-9e0d-98082dd503bc",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"4dc8803ed66dfde499b7d26c\"",
+      "createdon": "2025-07-19T12:00:00.000Z",
+      "modifiedon": "2025-07-19T14:00:00.000Z",
+      "msdyn_description": "Service interruption",
+      "msdyn_levelofimportance": 1,
+      "msdyn_name": "High",
+      "msdyn_priorityid": "ffecf0a0-9ff7-5fe1-9383-00609fd3fa81",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    }
+  ]
+}

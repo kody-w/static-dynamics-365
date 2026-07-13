@@ -4,18 +4,22 @@ import test from "node:test";
 import { createTwin } from "../site/twin-core.mjs";
 import {
   CASE_STATUS_REASON_LABELS,
+  FORM_LOOKUPS,
   NAV_GROUPS,
   PAGE_SIZE,
+  SYSTEM_VIEWS,
   applySystemView,
   caseStatusLabel,
   caseStatusReasonLabel,
   combineActivities,
+  createFormPayload,
   createNavigationHistory,
   dashboardComponents,
   editableSnapshotsEqual,
   initializeLookupDraft,
   lookupControlValue,
   lookupPayload,
+  lookupTargetsForApp,
   nextRovingTabIndex,
   paginateRows,
   preflightAccountDeletion,
@@ -40,6 +44,7 @@ import {
   transitionPatch,
   updateSelection,
 } from "../site/app-helpers.mjs";
+import { TENANT_SCHEMA } from "../site/tenant-schema.mjs";
 
 const seed = JSON.parse(
   fs.readFileSync(new URL("../data/seed.json", import.meta.url), "utf8"),
@@ -420,6 +425,271 @@ test("lookup drafts survive tab rerenders and exactly match create payloads", ()
     assert.equal(payload[field], selected);
     for (const [name, value] of Object.entries(extras)) assert.equal(payload[name], value);
   }
+});
+
+test("Sales and Product New-form drafts rerender and save through real POST", async () => {
+  const instance = createTwin({ seed });
+  const state = instance.state().entities;
+  const account = state.accounts[0];
+  const currency = state.transactioncurrencies.find(
+    (record) => record.isocurrencycode === "USD" && record.statecode === 0,
+  );
+  const priceList = state.pricelevels.find(
+    (record) =>
+      record.statecode === 0 &&
+      record.transactioncurrencyid === currency.transactioncurrencyid,
+  );
+  const unit = state.uoms[0];
+  const schedule = state.uomschedules[0];
+  const vectors = {
+    leads: {
+      subject: "UI lead",
+      firstname: "UI",
+      lastname: "Lead",
+      companyname: "UI Example",
+      transactioncurrencyid: currency.transactioncurrencyid,
+    },
+    opportunities: {
+      name: "UI opportunity",
+      customerid: account.accountid,
+      customeridtype: "accounts",
+      pricelevelid: priceList.pricelevelid,
+      estimatedclosedate: "2035-04-01T00:00:00Z",
+    },
+    quotes: {
+      name: "UI quote",
+      customerid: account.accountid,
+      customeridtype: "accounts",
+      pricelevelid: priceList.pricelevelid,
+    },
+    salesorders: {
+      name: "UI order",
+      customerid: account.accountid,
+      customeridtype: "accounts",
+      pricelevelid: priceList.pricelevelid,
+    },
+    invoices: {
+      name: "UI invoice",
+      customerid: account.accountid,
+      customeridtype: "accounts",
+      pricelevelid: priceList.pricelevelid,
+    },
+    products: {
+      name: "UI product",
+      productnumber: "UI-PRODUCT-001",
+      defaultuomid: unit.uomid,
+      defaultuomscheduleid: schedule.uomscheduleid,
+      transactioncurrencyid: currency.transactioncurrencyid,
+    },
+  };
+  for (const [entity, values] of Object.entries(vectors)) {
+    let draft = initializeLookupDraft(entity, null, values, "sales");
+    draft = initializeLookupDraft(entity, null, { ...draft }, "sales");
+    const body = createFormPayload(entity, draft);
+    for (const [field, value] of Object.entries(values)) {
+      assert.equal(body[field], value, `${entity}.${field}`);
+    }
+    const response = await instance.fetch(`/api/data/v9.2/${entity}`, {
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body,
+    });
+    assert.equal(response.status, 201, `${entity}: ${await response.text()}`);
+  }
+  const product = instance
+    .state()
+    .entities.products.find((record) => record.productnumber === "UI-PRODUCT-001");
+  assert.equal(product.defaultuomscheduleid, schedule.uomscheduleid);
+  assert.equal(product.defaultuomid, unit.uomid);
+});
+
+test("entity-specific active views honor every declared lifecycle vector", () => {
+  const expectedCounts = {
+    accounts: 12,
+    bookableresourcebookings: 6,
+    bookableresources: 4,
+    bookingstatuses: 5,
+    connections: 40,
+    contacts: 28,
+    incidents: 15,
+    invoices: 2,
+    leads: 5,
+    msdyn_customerassets: 18,
+    msdyn_incidenttypes: 4,
+    msdyn_priorities: 3,
+    msdyn_resourcerequirements: 8,
+    msdyn_servicetasktypes: 6,
+    msdyn_workorderincidents: 8,
+    msdyn_workorderproducts: 13,
+    msdyn_workorders: 8,
+    msdyn_workorderservices: 8,
+    msdyn_workorderservicetasks: 24,
+    msdyn_workordertypes: 3,
+    opportunities: 7,
+    pricelevels: 3,
+    products: 12,
+    quotes: 3,
+    salesorders: 2,
+    tasks: 18,
+    transactioncurrencies: 3,
+    uoms: 1,
+    uomschedules: 1,
+  };
+  for (const [entity, definition] of Object.entries(TENANT_SCHEMA.entities)) {
+    if (!definition.activeStatusPairs.length) continue;
+    const expected = data[entity].filter((record) =>
+      definition.activeStatusPairs.some(
+        (pair) =>
+          pair.statecode === record.statecode &&
+          pair.statuscode === record.statuscode,
+      ),
+    );
+    assert.deepEqual(
+      applySystemView(data[entity], entity, "active").map(
+        (record) => record[definition.key],
+      ),
+      expected.map((record) => record[definition.key]),
+      entity,
+    );
+    assert.equal(expected.length, expectedCounts[entity], entity);
+  }
+  assert.deepEqual(
+    Object.keys(expectedCounts).sort(),
+    Object.entries(TENANT_SCHEMA.entities)
+      .filter(([, definition]) => definition.activeStatusPairs.length)
+      .map(([entity]) => entity)
+      .sort(),
+  );
+  const activeQuotes = applySystemView(data.quotes, "quotes", "active");
+  assert.ok(activeQuotes.length > 0);
+  assert.ok(
+    activeQuotes.every(
+      (record) => record.statecode === 1 && record.statuscode === 2,
+    ),
+  );
+  assert.ok(!SYSTEM_VIEWS.quotedetails.some((view) => view.id === "active"));
+});
+
+test("activity Quick Create targets are app-aware and related records are generic", async () => {
+  const regarding = (entity) =>
+    FORM_LOOKUPS[entity].find(
+      (definition) => definition.field === "regardingobjectid",
+    );
+  assert.deepEqual(
+    lookupTargetsForApp(regarding("tasks"), "sales").map(
+      (target) => target.entity,
+    ),
+    [
+      "accounts",
+      "contacts",
+      "leads",
+      "opportunities",
+      "quotes",
+      "salesorders",
+      "invoices",
+    ],
+  );
+  assert.deepEqual(
+    lookupTargetsForApp(regarding("emails"), "field-service").map(
+      (target) => target.entity,
+    ),
+    [
+      "accounts",
+      "contacts",
+      "incidents",
+      "msdyn_customerassets",
+      "msdyn_workorders",
+    ],
+  );
+
+  const instance = createTwin({ seed });
+  let state = instance.state().entities;
+  const quote = state.quotes[0];
+  let draft = initializeLookupDraft(
+    "tasks",
+    null,
+    {
+      subject: "Direct Sales activity",
+      scheduledend: "2035-05-01T12:00:00Z",
+      regardingobjectid: quote.quoteid,
+      regardingobjectidtype: "quotes",
+    },
+    "sales",
+  );
+  let response = await instance.fetch("/api/data/v9.2/tasks", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: createFormPayload("tasks", draft),
+  });
+  const salesTask = await response.json();
+  assert.equal(response.status, 201);
+
+  state = instance.state().entities;
+  const asset = state.msdyn_customerassets[0];
+  const workorder = state.msdyn_workorders.find(
+    (record) => record.msdyn_customerasset === asset.msdyn_customerassetid,
+  );
+  draft = initializeLookupDraft(
+    "emails",
+    null,
+    {
+      subject: "Direct Field activity",
+      fromaddress: "technician@crm.asterlane.example",
+      toaddress: "customer@example.example",
+      description: "Synthetic activity.",
+      regardingobjectid: asset.msdyn_customerassetid,
+      regardingobjectidtype: "msdyn_customerassets",
+    },
+    "field-service",
+  );
+  response = await instance.fetch("/api/data/v9.2/emails", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: createFormPayload("emails", draft),
+  });
+  const fieldEmail = await response.json();
+  assert.equal(response.status, 201);
+  response = await instance.fetch("/api/data/v9.2/tasks", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: {
+      subject: "Cross-app work order activity",
+      scheduledend: "2035-05-02T12:00:00Z",
+      regardingobjectid: workorder.msdyn_workorderid,
+      regardingobjectidtype: "msdyn_workorders",
+    },
+  });
+  const fieldTask = await response.json();
+  assert.equal(response.status, 201);
+
+  state = instance.state().entities;
+  const salesActivities = relatedActivities(
+    "quotes",
+    quote,
+    state,
+    instance.clock.now(),
+  );
+  assert.equal(
+    salesActivities.filter((activity) => activity.activityid === salesTask.activityid)
+      .length,
+    1,
+  );
+  const fieldActivities = relatedActivities(
+    "msdyn_customerassets",
+    asset,
+    state,
+    instance.clock.now(),
+  );
+  assert.equal(
+    fieldActivities.filter((activity) => activity.activityid === fieldEmail.activityid)
+      .length,
+    1,
+  );
+  assert.equal(
+    fieldActivities.filter((activity) => activity.activityid === fieldTask.activityid)
+      .length,
+    1,
+  );
 });
 
 test("record tabs wrap with roving keyboard behavior and skip disabled tabs", () => {

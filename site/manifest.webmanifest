@@ -1,6 +1,6 @@
 {
   "background_color": "#ffffff",
-  "description": "Deterministic customer service and Dataverse simulation.",
+  "description": "Deterministic Customer Service, Sales, and Field Service tenant simulation.",
   "display": "standalone",
   "name": "Static Dynamics 365",
   "scope": "./",

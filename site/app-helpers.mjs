@@ -1,3 +1,5 @@
+import { TENANT_SCHEMA } from "./tenant-schema.mjs";
+
 export const PAGE_SIZE = 50;
 export const RELATED_ACTIVITY_LIMIT = 25;
 export const CASE_STATUS_REASON_LABELS = Object.freeze({
@@ -5,6 +7,42 @@ export const CASE_STATUS_REASON_LABELS = Object.freeze({
   1: Object.freeze({ 5: "Problem Solved", 1000: "Information Provided" }),
   2: Object.freeze({ 6: "Canceled", 2000: "Merged" }),
 });
+
+export const APP_ROUTE_PREFIXES = Object.freeze(
+  Object.fromEntries(
+    Object.values(TENANT_SCHEMA.apps).map((app) => [app.prefix, app.id]),
+  ),
+);
+
+export function appRoute(appId, path = "dashboard") {
+  const app = TENANT_SCHEMA.apps[appId];
+  if (!app) throw new TypeError(`unknown app: ${appId}`);
+  return `#/${app.prefix}/${String(path).replace(/^\/+/, "")}`;
+}
+
+export function parseAppRoute(hash) {
+  const value = String(hash || "").startsWith("#/")
+    ? String(hash).slice(2)
+    : "dashboard";
+  const queryIndex = value.indexOf("?");
+  const path = queryIndex >= 0 ? value.slice(0, queryIndex) : value;
+  const query = queryIndex >= 0 ? value.slice(queryIndex + 1) : "";
+  const rawSegments = path.split("/").filter(Boolean);
+  const appId = APP_ROUTE_PREFIXES[rawSegments[0]] || "customer-service";
+  const prefixed = Boolean(APP_ROUTE_PREFIXES[rawSegments[0]]);
+  const segments = prefixed ? rawSegments.slice(1) : rawSegments;
+  return {
+    appId,
+    prefixed,
+    segments,
+    key: segments.join("/"),
+    query,
+    canonical: appRoute(
+      appId,
+      `${segments.join("/") || "dashboard"}${query ? `?${query}` : ""}`,
+    ),
+  };
+}
 
 export const NAV_GROUPS = Object.freeze([
   Object.freeze({
@@ -60,7 +98,7 @@ export const NAV_GROUPS = Object.freeze([
   }),
 ]);
 
-export const ENTITY_UI = Object.freeze({
+const LEGACY_ENTITY_UI = Object.freeze({
   accounts: Object.freeze({
     singular: "Account",
     plural: "Accounts",
@@ -160,7 +198,46 @@ export const ENTITY_UI = Object.freeze({
   }),
 });
 
-export const FORM_FIELDS = Object.freeze({
+function titleCaseField(name) {
+  return name
+    .replace(/^msdyn_/, "")
+    .replace(/idname$/, "")
+    .replace(/id$/, "")
+    .replaceAll("_", " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const GENERATED_ENTITY_UI = Object.fromEntries(
+  Object.entries(TENANT_SCHEMA.entities).map(([entity, definition]) => {
+    const declared = definition.ui || {};
+    const columns = declared.columns || [
+      [definition.primaryName, titleCaseField(definition.primaryName)],
+      ...(definition.fields.statecode ? [["statecode", "Status"]] : []),
+      ...(definition.fields.modifiedon ? [["modifiedon", "Modified On"]] : []),
+    ];
+    const search = declared.search || columns.map(([field]) => field);
+    return [
+      entity,
+      Object.freeze({
+        singular: declared.singular || titleCaseField(definition.logicalName),
+        plural: declared.plural || titleCaseField(entity),
+        id: definition.key,
+        primary: definition.primaryName,
+        search: Object.freeze(search),
+        columns: Object.freeze(columns.map((column) => Object.freeze(column))),
+      }),
+    ];
+  }),
+);
+
+export const ENTITY_UI = Object.freeze({
+  ...GENERATED_ENTITY_UI,
+  ...LEGACY_ENTITY_UI,
+});
+
+
+const LEGACY_FORM_FIELDS = Object.freeze({
   accounts: Object.freeze({
     summary: Object.freeze([
       ["name", "Account Name", "text", true],
@@ -248,7 +325,47 @@ export const FORM_FIELDS = Object.freeze({
   }),
 });
 
-export const FORM_LOOKUPS = Object.freeze({
+function formKind(field) {
+  if (field.runtimeType === "datetime") return "datetime";
+  if (field.runtimeType === "integer") return "number";
+  if (field.runtimeType === "url") return "url";
+  return field.name?.includes("description") || field.name?.includes("instructions")
+    ? "textarea"
+    : "text";
+}
+
+const GENERATED_FORM_FIELDS = Object.fromEntries(
+  Object.entries(TENANT_SCHEMA.entities).map(([entity, definition]) => {
+    const requested = definition.ui?.form || [definition.primaryName];
+    const fields = requested
+      .filter((name) => definition.fields[name] && !definition.fields[name].lookup)
+      .map((name) => {
+        const field = { ...definition.fields[name], name };
+        return Object.freeze([
+          name,
+          titleCaseField(name),
+          formKind(field),
+          definition.requiredOnCreate.includes(name),
+        ]);
+      });
+    const midpoint = Math.min(6, fields.length);
+    return [
+      entity,
+      Object.freeze({
+        summary: Object.freeze(fields.slice(0, midpoint)),
+        details: Object.freeze(fields.slice(midpoint)),
+      }),
+    ];
+  }),
+);
+
+export const FORM_FIELDS = Object.freeze({
+  ...GENERATED_FORM_FIELDS,
+  ...LEGACY_FORM_FIELDS,
+});
+
+
+const LEGACY_FORM_LOOKUPS = Object.freeze({
   accounts: Object.freeze([
     Object.freeze({
       field: "primarycontactid",
@@ -290,23 +407,51 @@ export const FORM_LOOKUPS = Object.freeze({
       activeOnly: true,
     }),
   ]),
-  tasks: Object.freeze([
-    Object.freeze({
-      field: "regardingobjectid",
-      label: "Regarding Case",
-      entity: "incidents",
-      idField: "incidentid",
-      textField: "title",
-      required: true,
-      activeOnly: true,
-      typeField: "regardingobjectidtype",
-      typeValue: "incidents",
-    }),
-  ]),
-  emails: Object.freeze([]),
 });
 
-export const SYSTEM_VIEWS = Object.freeze({
+const GENERATED_FORM_LOOKUPS = Object.fromEntries(
+  Object.entries(TENANT_SCHEMA.entities).map(([entity, definition]) => [
+    entity,
+    Object.freeze(
+      (definition.ui?.form || [])
+        .filter((name) => definition.fields[name]?.lookup)
+        .map((name) => {
+          const field = definition.fields[name];
+          const targets = field.lookup.targets.map((target) => {
+            const targetDefinition = TENANT_SCHEMA.entities[target];
+            return Object.freeze({
+              entity: target,
+              idField: targetDefinition.key,
+              textField: targetDefinition.primaryName,
+            });
+          });
+          const target = targets[0];
+          return Object.freeze({
+            field: name,
+            label: titleCaseField(name),
+            entity: target.entity,
+            idField: target.idField,
+            textField: target.textField,
+            targets: Object.freeze(targets),
+            required: definition.requiredOnCreate.includes(name),
+            activeOnly:
+              targets.length === 1 &&
+              TENANT_SCHEMA.entities[target.entity].activeStatusPairs.length > 0,
+            typeField: field.lookup.discriminator || null,
+            typeValue: field.lookup.discriminator ? target.entity : null,
+          });
+        }),
+    ),
+  ]),
+);
+
+export const FORM_LOOKUPS = Object.freeze({
+  ...GENERATED_FORM_LOOKUPS,
+  ...LEGACY_FORM_LOOKUPS,
+});
+
+
+const LEGACY_SYSTEM_VIEWS = Object.freeze({
   accounts: Object.freeze([
     Object.freeze({ id: "active", label: "Active Accounts" }),
     Object.freeze({ id: "all", label: "All Accounts" }),
@@ -342,6 +487,24 @@ export const SYSTEM_VIEWS = Object.freeze({
     Object.freeze({ id: "completed", label: "Completed Activities" }),
   ]),
 });
+
+const GENERATED_SYSTEM_VIEWS = Object.fromEntries(
+  Object.keys(TENANT_SCHEMA.entities).map((entity) => [
+    entity,
+    Object.freeze([
+      ...(TENANT_SCHEMA.entities[entity].activeStatusPairs.length
+        ? [Object.freeze({ id: "active", label: `Active ${ENTITY_UI[entity].plural}` })]
+        : []),
+      Object.freeze({ id: "all", label: `All ${ENTITY_UI[entity].plural}` }),
+    ]),
+  ]),
+);
+
+export const SYSTEM_VIEWS = Object.freeze({
+  ...GENERATED_SYSTEM_VIEWS,
+  ...LEGACY_SYSTEM_VIEWS,
+});
+
 
 export function codeUnitCompare(left, right) {
   const a = String(left ?? "");
@@ -391,6 +554,9 @@ export function priorityLabel(value) {
 }
 
 export function gridCodeLabel(entity, field, value, now = "", record = null) {
+  const formatted =
+    record?.[`${field}@OData.Community.Display.V1.FormattedValue`];
+  if (formatted) return formatted;
   if (field === "prioritycode") return priorityLabel(value);
   if (entity === "incidents" && field === "statuscode") {
     return caseStatusReasonLabel(record || { statuscode: value });
@@ -453,6 +619,15 @@ export function combineActivities(emails = [], tasks = [], now = "") {
   );
 }
 
+export function isSchemaActive(entity, record) {
+  const pairs = TENANT_SCHEMA.entities[entity]?.activeStatusPairs || [];
+  return pairs.some(
+    (pair) =>
+      pair.statecode === record?.statecode &&
+      pair.statuscode === record?.statuscode,
+  );
+}
+
 export function applySystemView(records, entity, viewId, now = "") {
   const rows = records.slice();
   if (viewId === "all") return rows;
@@ -483,6 +658,18 @@ export function applySystemView(records, entity, viewId, now = "") {
     if (viewId === "sent") return rows.filter((record) => record.directioncode);
     if (viewId === "received") return rows.filter((record) => !record.directioncode);
   }
+  if (
+    viewId === "active" &&
+    TENANT_SCHEMA.entities[entity]?.activeStatusPairs?.length
+  ) {
+    return rows.filter((record) => isSchemaActive(entity, record));
+  }
+  if (
+    viewId === "inactive" &&
+    TENANT_SCHEMA.entities[entity]?.activeStatusPairs?.length
+  ) {
+    return rows.filter((record) => !isSchemaActive(entity, record));
+  }
   return rows;
 }
 
@@ -507,6 +694,23 @@ export function stableSortRows(records, key, direction = "asc", identityKey = nu
     if (a === null || a === undefined) comparison = b === null || b === undefined ? 0 : -1;
     else if (b === null || b === undefined) comparison = 1;
     else if (typeof a === "number" && typeof b === "number") comparison = a - b;
+    else if (
+      typeof a === "string" &&
+      typeof b === "string" &&
+      /^-?\d+\.\d+$/.test(a) &&
+      /^-?\d+\.\d+$/.test(b)
+    ) {
+      const scale = Math.max(a.split(".")[1].length, b.split(".")[1].length);
+      const units = (value) => {
+        const negative = value.startsWith("-");
+        const unsigned = negative ? value.slice(1) : value;
+        const [whole, fraction] = unsigned.split(".");
+        const parsed = BigInt(`${whole}${fraction.padEnd(scale, "0")}`);
+        return negative ? -parsed : parsed;
+      };
+      const difference = units(a) - units(b);
+      comparison = difference < 0n ? -1 : difference > 0n ? 1 : 0;
+    }
     else comparison = codeUnitCompare(a, b);
     if (comparison) return comparison * multiplier;
     const fallback =
@@ -614,63 +818,51 @@ export function relatedEmailsForContact(emails, contact, incidents = []) {
 }
 
 export function relatedActivities(entity, record, data, now) {
-  let caseIds = new Set();
-  if (entity === "incidents") caseIds = new Set([record.incidentid]);
-  if (entity === "contacts") {
-    caseIds = new Set(
-      data.incidents
-        .filter(
-          (item) =>
-            item.primarycontactid === record.contactid ||
-            (item.customeridtype === "contacts" && item.customerid === record.contactid),
-        )
-        .map((item) => item.incidentid),
-    );
+  const regardingTargets =
+    TENANT_SCHEMA.entities.tasks.fields.regardingobjectid.lookup.targets;
+  if (!regardingTargets.includes(entity)) return [];
+  const references = new Set();
+  const addReference = (targetEntity, targetRecord) => {
+    const definition = TENANT_SCHEMA.entities[targetEntity];
+    const id = targetRecord?.[definition?.key];
+    if (id) references.add(`${targetEntity}\0${id}`);
+  };
+  addReference(entity, record);
+  for (let depth = 0; depth < 2; depth += 1) {
+    const snapshot = new Set(references);
+    for (const targetEntity of regardingTargets) {
+      const definition = TENANT_SCHEMA.entities[targetEntity];
+      for (const candidate of data[targetEntity] || []) {
+        const candidateKey = `${targetEntity}\0${candidate[definition.key]}`;
+        const candidateKnown = snapshot.has(candidateKey);
+        for (const [field, fieldDefinition] of Object.entries(definition.fields)) {
+          const lookup = fieldDefinition.lookup;
+          if (!lookup || candidate[field] === null || candidate[field] === undefined) {
+            continue;
+          }
+          const target = lookup.discriminator
+            ? candidate[lookup.discriminator]
+            : lookup.targets[0];
+          if (!regardingTargets.includes(target)) continue;
+          const targetKey = `${target}\0${candidate[field]}`;
+          if (candidateKnown) references.add(targetKey);
+          if (snapshot.has(targetKey)) references.add(candidateKey);
+        }
+      }
+    }
   }
-  if (entity === "accounts") {
-    const contactIds = new Set(
-      data.contacts
-        .filter((contact) => contact.parentcustomerid === record.accountid)
-        .map((contact) => contact.contactid),
+  const matchesRegarding = (item) =>
+    references.has(
+      `${item.regardingobjectidtype}\0${item.regardingobjectid}`,
     );
-    caseIds = new Set(
-      data.incidents
-        .filter(
-          (item) =>
-            (item.customeridtype === "accounts" && item.customerid === record.accountid) ||
-            contactIds.has(item.primarycontactid) ||
-            (item.customeridtype === "contacts" && contactIds.has(item.customerid)),
-        )
-        .map((item) => item.incidentid),
-    );
-  }
-  const directId =
-    entity === "accounts"
-      ? record.accountid
-      : entity === "contacts"
-        ? record.contactid
-        : entity === "incidents"
-          ? record.incidentid
-          : null;
-  const directType = entity;
+  const directId = record[TENANT_SCHEMA.entities[entity].key];
   const emails = data.emails.filter(
     (item) =>
-      caseIds.has(item.regardingobjectid) ||
-      (directId &&
-        item.regardingobjectid === directId &&
-        item.regardingobjectidtype === directType) ||
-      (entity === "accounts" &&
-        (item.senderid === record.accountid || item.recipientid === record.accountid)) ||
-      (entity === "contacts" &&
-        (item.senderid === record.contactid || item.recipientid === record.contactid)),
+      matchesRegarding(item) ||
+      (["accounts", "contacts"].includes(entity) &&
+        (item.senderid === directId || item.recipientid === directId)),
   );
-  const tasks = data.tasks.filter(
-    (item) =>
-      caseIds.has(item.regardingobjectid) ||
-      (directId &&
-        item.regardingobjectid === directId &&
-        item.regardingobjectidtype === directType),
-  );
+  const tasks = data.tasks.filter(matchesRegarding);
   const uniqueEmails = [...new Map(emails.map((item) => [item.activityid, item])).values()];
   const uniqueTasks = [...new Map(tasks.map((item) => [item.activityid, item])).values()];
   return combineActivities(uniqueEmails, uniqueTasks, now);
@@ -741,7 +933,7 @@ export function deriveDashboardMetrics(data, now) {
   const resolvedCases = data.incidents.filter((record) => record.statecode === 1);
   const openTasks = data.tasks.filter((record) => record.statecode === 0);
   const overdueTasks = openTasks.filter((record) => isTaskOverdue(record, now));
-  const slaBreaches = activeCases.filter(
+  const policyDeadlineBreaches = activeCases.filter(
     (record) => record.resolveby && Date.parse(record.resolveby) < Date.parse(now),
   );
   const byPriority = [1, 2, 3].map((code) => ({
@@ -764,7 +956,7 @@ export function deriveDashboardMetrics(data, now) {
     highPriorityCases: activeCases.filter((record) => record.prioritycode === 1).length,
     openTasks: openTasks.length,
     overdueTasks: overdueTasks.length,
-    slaBreaches: slaBreaches.length,
+    policyDeadlineBreaches: policyDeadlineBreaches.length,
     responseCompliance: data.incidents.length
       ? Math.round(
           (data.incidents.filter(
@@ -788,6 +980,123 @@ export function deriveDashboardMetrics(data, now) {
 
 export function dashboardComponents(data, now, dashboardId = "customer-service") {
   const metrics = deriveDashboardMetrics(data, now);
+  const sumMoney = (records, field) => {
+    const units = records.reduce((total, record) => {
+      const value = String(record[field] ?? "0.00");
+      const negative = value.startsWith("-");
+      const digits = (negative ? value.slice(1) : value).replace(".", "");
+      return total + (negative ? -BigInt(digits) : BigInt(digits));
+    }, 0n);
+    const absolute = units < 0n ? -units : units;
+    const text = absolute.toString().padStart(3, "0");
+    return `${units < 0n ? "-" : ""}$${text.slice(0, -2)}.${text.slice(-2)}`;
+  };
+  if (dashboardId === "sales-pipeline") {
+    const open = data.opportunities.filter((record) => record.statecode === 0);
+    return {
+      id: dashboardId,
+      title: "Sales Pipeline",
+      cards: [
+        ["Open Opportunities", open.length],
+        ["Pipeline Value", sumMoney(open, "estimatedvalue")],
+        ["Open Leads", data.leads.filter((record) => record.statecode === 0).length],
+        ["Active Quotes", data.quotes.filter((record) => record.statecode === 1).length],
+      ],
+      charts: [
+        {
+          title: "Pipeline by Stage",
+          values: [1, 2, 3, 4].map((stage) => ({
+            label: ["Qualify", "Develop", "Propose", "Close"][stage - 1],
+            value: open.filter((record) => record.salesstagecode === stage).length,
+          })),
+        },
+        {
+          title: "Opportunity Status",
+          values: [
+            { label: "Open", value: open.length },
+            { label: "Won", value: data.opportunities.filter((record) => record.statecode === 1).length },
+            { label: "Lost", value: data.opportunities.filter((record) => record.statecode === 2).length },
+          ],
+        },
+      ],
+    };
+  }
+  if (dashboardId === "sales-performance") {
+    const paid = data.invoices.filter((record) => record.statecode === 1);
+    return {
+      id: dashboardId,
+      title: "Sales Performance",
+      cards: [
+        ["Won Revenue", sumMoney(data.opportunities.filter((record) => record.statecode === 1), "actualvalue")],
+        ["Paid Invoices", paid.length],
+        ["Paid Invoice Value", sumMoney(paid, "totalamount")],
+        ["Fulfilled Orders", data.salesorders.filter((record) => record.statecode === 3).length],
+      ],
+      charts: [
+        {
+          title: "Document Lifecycle",
+          values: [
+            { label: "Quotes", value: data.quotes.length },
+            { label: "Orders", value: data.salesorders.length },
+            { label: "Invoices", value: data.invoices.length },
+          ],
+        },
+      ],
+    };
+  }
+  if (dashboardId === "field-operations") {
+    const workorders = data.msdyn_workorders;
+    return {
+      id: dashboardId,
+      title: "Field Service Operations",
+      cards: [
+        ["Unscheduled", workorders.filter((record) => record.msdyn_systemstatus === 690970000).length],
+        ["Scheduled", workorders.filter((record) => record.msdyn_systemstatus === 690970001).length],
+        ["In Progress", workorders.filter((record) => record.msdyn_systemstatus === 690970002).length],
+        ["Completed", workorders.filter((record) => record.msdyn_systemstatus === 690970003).length],
+      ],
+      charts: [
+        {
+          title: "Work Order Status",
+          values: [
+            ["Unscheduled", 690970000],
+            ["Scheduled", 690970001],
+            ["In Progress", 690970002],
+            ["Completed", 690970003],
+            ["Canceled", 690970005],
+          ].map(([label, status]) => ({
+            label,
+            value: workorders.filter((record) => record.msdyn_systemstatus === status).length,
+          })),
+        },
+      ],
+    };
+  }
+  if (dashboardId === "technician-day") {
+    const day = String(now).slice(0, 10);
+    const bookings = data.bookableresourcebookings.filter((record) =>
+      record.starttime.startsWith(day),
+    );
+    return {
+      id: dashboardId,
+      title: "Technician Day",
+      cards: [
+        ["Today's Bookings", bookings.length],
+        ["Technicians", data.bookableresources.length],
+        ["Completed Bookings", bookings.filter((record) => record.bookingstatusname === "Completed").length],
+        ["Customer Assets", data.msdyn_customerassets.length],
+      ],
+      charts: [
+        {
+          title: "Bookings by Technician",
+          values: data.bookableresources.map((resource) => ({
+            label: resource.name,
+            value: bookings.filter((booking) => booking.resource === resource.bookableresourceid).length,
+          })),
+        },
+      ],
+    };
+  }
   if (dashboardId === "service-activity") {
     return {
       id: "service-activity",
@@ -823,8 +1132,8 @@ export function dashboardComponents(data, now, dashboardId = "customer-service")
     cards: [
       ["Active Cases", metrics.activeCases],
       ["High Priority", metrics.highPriorityCases],
-      ["SLA Breaches", metrics.slaBreaches],
-      ["Response Compliance", `${metrics.responseCompliance}%`],
+      ["Policy Deadline Breaches", metrics.policyDeadlineBreaches],
+      ["Response Before Policy Deadline", `${metrics.responseCompliance}%`],
     ],
     charts: [
       { title: "Active Cases by Priority", values: metrics.byPriority },
@@ -844,13 +1153,43 @@ export function normalizeEditableSnapshot(values = {}) {
   return normalized;
 }
 
-export function initializeLookupDraft(entity, record = null, draft = {}) {
+export function lookupTargetsForApp(definition, appId = "customer-service") {
+  const targets = definition.targets || [
+    {
+      entity: definition.entity,
+      idField: definition.idField,
+      textField: definition.textField,
+    },
+  ];
+  const scoped = targets.filter((target) =>
+    TENANT_SCHEMA.entities[target.entity].appScopes.includes(appId),
+  );
+  return scoped.length ? scoped : targets;
+}
+
+export function initializeLookupDraft(
+  entity,
+  record = null,
+  draft = {},
+  appId = "customer-service",
+) {
   const next = { ...draft };
   for (const definition of FORM_LOOKUPS[entity] || []) {
     next[definition.field] = record?.[definition.field] ?? next[definition.field] ?? "";
     if (definition.typeField) {
+      const targets = lookupTargetsForApp(definition, appId);
+      const preferred = {
+        "customer-service": "incidents",
+        sales: "opportunities",
+        "field-service": "msdyn_workorders",
+      }[appId];
+      const fallback =
+        targets.find((target) => target.entity === preferred)?.entity ||
+        targets[0].entity;
       next[definition.typeField] =
-        record?.[definition.typeField] ?? next[definition.typeField] ?? definition.typeValue;
+        record?.[definition.typeField] ??
+        next[definition.typeField] ??
+        fallback;
     }
   }
   return next;
@@ -874,6 +1213,21 @@ export function lookupPayload(entity, draft, record = null) {
     }
   }
   return payload;
+}
+
+export function createFormPayload(entity, draft = {}) {
+  const payload = {};
+  for (const section of ["summary", "details"]) {
+    for (const [field, , kind] of FORM_FIELDS[entity]?.[section] || []) {
+      const schemaField = TENANT_SCHEMA.entities[entity]?.fields[field];
+      if (!schemaField?.mutable || schemaField.lookup) continue;
+      let value = draft[field];
+      if (value === "" || value === null || value === undefined) continue;
+      if (kind === "number") value = Number(value);
+      payload[field] = value;
+    }
+  }
+  return { ...payload, ...lookupPayload(entity, draft) };
 }
 
 export function editableSnapshotsEqual(left, right) {

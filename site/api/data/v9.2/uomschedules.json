@@ -1,0 +1,21 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#uomschedules",
+  "@odata.count": 1,
+  "value": [
+    {
+      "@odata.etag": "W/\"ac4eda604278315c6a09dba8\"",
+      "createdon": "2025-07-19T12:00:00.000Z",
+      "description": "Synthetic default unit group.",
+      "modifiedon": "2025-07-19T14:00:00.000Z",
+      "name": "Default Unit",
+      "ownerid": "be4368f9-2d8f-5a72-aad0-7e400a346005",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Jordan Lee",
+      "owneridname": "Jordan Lee",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active",
+      "uomscheduleid": "b6532137-5344-505d-a493-b2a13c842ab5"
+    }
+  ]
+}

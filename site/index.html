@@ -11,9 +11,9 @@
     <meta name="theme-color" content="#17324d">
     <meta
       name="description"
-      content="Static Dynamics 365 customer service demonstration for Aster Lane Office Systems."
+      content="Independent deterministic Customer Service, Sales, and Field Service compatibility simulator."
     >
-    <title>Static Dynamics 365 — Customer Service Hub</title>
+    <title>Static Dynamics 365 — Multi-app tenant simulator</title>
     <link rel="stylesheet" href="./styles.css">
     <link rel="manifest" href="./manifest.webmanifest">
     <script type="module" src="./app.mjs"></script>
@@ -53,7 +53,7 @@
           <circle cx="18" cy="18" r="1.5"></circle>
         </svg>
       </button>
-      <a class="product-name" href="#/dashboard">Static Dynamics 365</a>
+      <a class="product-name" href="#/cs/dashboard">Static Dynamics 365</a>
       <span class="header-rule" aria-hidden="true"></span>
       <button
         id="app-selector"
@@ -92,7 +92,7 @@
       </button>
       <a
         class="icon-button"
-        href="#/service-management/simulation-settings"
+        href="#/cs/service-management/simulation-settings"
         aria-label="Settings"
         title="Settings"
       >
@@ -102,11 +102,12 @@
         </svg>
       </a>
       <span class="user-avatar" title="Jordan Lee" aria-label="Signed in as Jordan Lee">JL</span>
+      <span class="simulator-disclosure">Independent simulator · synthetic data</span>
     </header>
 
     <div id="app-launcher-menu" class="header-flyout app-menu" hidden>
       <h2>Apps</h2>
-      <a href="#/dashboard">
+      <a href="#/cs/dashboard">
         <span class="app-tile" aria-hidden="true">
           <svg viewBox="0 0 24 24">
             <path d="M4 19V8l8-4 8 4v11M8 19v-6h8v6"></path>
@@ -114,22 +115,30 @@
         </span>
         <span><strong>Customer Service Hub</strong><small>Customer service</small></span>
       </a>
-      <a href="#/service-management/simulation-settings">
+      <a href="#/sales/dashboard">
         <span class="app-tile" aria-hidden="true">
           <svg viewBox="0 0 24 24">
-            <path d="M7 5h10v14H7zM9 9h6M9 13h6M9 17h4"></path>
+            <path d="M5 18V9m7 9V5m7 13v-7M3 20h18"></path>
           </svg>
         </span>
-        <span><strong>Service Management</strong><small>Administration</small></span>
+        <span><strong>Sales Hub</strong><small>Sales</small></span>
+      </a>
+      <a href="#/field/dashboard">
+        <span class="app-tile" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 17h10V7H4zM14 11h4l2 3v3h-6M7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4m10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4"></path>
+          </svg>
+        </span>
+        <span><strong>Field Service</strong><small>Service delivery</small></span>
       </a>
     </div>
 
     <div id="quick-create-menu" class="header-flyout quick-menu" hidden>
       <h2>Quick Create</h2>
-      <a href="#/contacts/new">Contact</a>
-      <a href="#/accounts/new">Account</a>
-      <a href="#/tasks/new">Task</a>
-      <a href="#/cases/new">Case</a>
+      <a href="#/cs/contacts/new">Contact</a>
+      <a href="#/cs/accounts/new">Account</a>
+      <a href="#/cs/tasks/new">Task</a>
+      <a href="#/cs/cases/new">Case</a>
     </div>
 
     <div class="workspace">
@@ -143,13 +152,13 @@
         <nav>
           <section aria-labelledby="nav-my-work">
             <h2 id="nav-my-work">My Work</h2>
-            <a href="#/dashboard" data-nav="dashboards" aria-current="page">
+            <a href="#/cs/dashboard" data-nav="dashboards" aria-current="page">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 4h7v7H4zM13 4h7v5h-7zM13 11h7v9h-7zM4 13h7v7H4z"></path>
               </svg>
               <span>Dashboards</span>
             </a>
-            <a href="#/activities" data-nav="activities">
+            <a href="#/cs/activities" data-nav="activities">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 4h14v16H5zM8 8h8M8 12h6M8 16h4"></path>
               </svg>
@@ -158,13 +167,13 @@
           </section>
           <section aria-labelledby="nav-customers">
             <h2 id="nav-customers">Customers</h2>
-            <a href="#/accounts" data-nav="accounts">
+            <a href="#/cs/accounts" data-nav="accounts">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 20V8h16v12M8 8V4h8v4M8 12h2M14 12h2M8 16h2M14 16h2"></path>
               </svg>
               <span>Accounts</span>
             </a>
-            <a href="#/contacts" data-nav="contacts">
+            <a href="#/cs/contacts" data-nav="contacts">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="8" r="3"></circle>
                 <path d="M5 20c.7-4 3-6 7-6s6.3 2 7 6"></path>
@@ -174,13 +183,13 @@
           </section>
           <section aria-labelledby="nav-service">
             <h2 id="nav-service">Service</h2>
-            <a href="#/cases" data-nav="cases">
+            <a href="#/cs/cases" data-nav="cases">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M4 7h16v13H4zM8 7V4h8v3M8 12h8M8 16h5"></path>
               </svg>
               <span>Cases</span>
             </a>
-            <a href="#/queues" data-nav="queues">
+            <a href="#/cs/queues" data-nav="queues">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 5h14v4H5zM5 11h14v4H5zM5 17h14v3H5z"></path>
               </svg>
@@ -189,13 +198,13 @@
           </section>
           <section aria-labelledby="nav-knowledge">
             <h2 id="nav-knowledge">Knowledge</h2>
-            <a href="#/knowledge-articles" data-nav="knowledge-articles">
+            <a href="#/cs/knowledge-articles" data-nav="knowledge-articles">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 4h10l4 4v12H5zM15 4v5h4M8 13h8M8 17h6"></path>
               </svg>
               <span>Knowledge Articles</span>
             </a>
-            <a href="#/knowledge-search" data-nav="knowledge-search">
+            <a href="#/cs/knowledge-search" data-nav="knowledge-search">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="10" cy="10" r="5"></circle>
                 <path d="m14 14 5 5M7.5 10h5M10 7.5v5"></path>
@@ -206,7 +215,7 @@
           <section aria-labelledby="nav-management">
             <h2 id="nav-management">Service Management</h2>
             <a
-              href="#/service-management/simulation-settings"
+              href="#/cs/service-management/simulation-settings"
               data-nav="simulation-settings"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -214,7 +223,7 @@
               </svg>
               <span>Simulation settings</span>
             </a>
-            <a href="#/service-management/api-simulation" data-nav="api-simulation">
+            <a href="#/cs/service-management/api-simulation" data-nav="api-simulation">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="12" r="8"></circle>
                 <path d="M12 11v5M12 8h.01"></path>
@@ -223,7 +232,7 @@
             </a>
           </section>
         </nav>
-        <a class="area-switcher" href="#/dashboard">
+        <a class="area-switcher" href="#/cs/dashboard">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 5h6v6H5zM13 5h6v6h-6zM5 13h6v6H5zM13 13h6v6h-6z"></path>
           </svg>

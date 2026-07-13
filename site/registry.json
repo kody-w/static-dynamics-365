@@ -1,19 +1,86 @@
 {
+  "actions": [
+    "CloseIncident",
+    "QualifyLead",
+    "DisqualifyLead",
+    "ReopenLead",
+    "WinOpportunity",
+    "LoseOpportunity",
+    "ReopenOpportunity",
+    "GenerateQuote",
+    "ActivateQuote",
+    "ReviseQuote",
+    "WinQuote",
+    "CloseQuote",
+    "ConvertQuoteToSalesOrder",
+    "CancelSalesOrder",
+    "FulfillSalesOrder",
+    "ConvertSalesOrderToInvoice",
+    "MarkInvoicePaid",
+    "CancelInvoice",
+    "CreateWorkOrder",
+    "ScheduleWorkOrder",
+    "CompleteBooking",
+    "CancelBooking",
+    "DispatchWorkOrder",
+    "StartWorkOrder",
+    "CompleteWorkOrder",
+    "CancelWorkOrder",
+    "ReopenWorkOrder"
+  ],
+  "compatibilityProfile": {
+    "label": "Independent simulator policy; trial parity unverified",
+    "name": "public-docs-subset",
+    "sourceDate": "2026-07-12"
+  },
   "counts": {
     "accounts": 12,
+    "bookableresourcebookings": 13,
+    "bookableresources": 4,
+    "bookingstatuses": 5,
+    "businessunits": 1,
     "connections": 40,
     "contacts": 30,
     "emails": 60,
+    "incidentresolutions": 7,
     "incidents": 24,
-    "tasks": 36
+    "invoicedetails": 12,
+    "invoices": 5,
+    "leads": 24,
+    "msdyn_customerassets": 18,
+    "msdyn_incidenttypes": 4,
+    "msdyn_priorities": 3,
+    "msdyn_resourcerequirements": 15,
+    "msdyn_servicetasktypes": 6,
+    "msdyn_workorderincidents": 15,
+    "msdyn_workorderproducts": 20,
+    "msdyn_workorders": 15,
+    "msdyn_workorderservices": 15,
+    "msdyn_workorderservicetasks": 45,
+    "msdyn_workordertypes": 3,
+    "opportunities": 15,
+    "opportunitycloses": 8,
+    "opportunityproducts": 36,
+    "pricelevels": 4,
+    "productpricelevels": 48,
+    "products": 12,
+    "quotedetails": 30,
+    "quotes": 12,
+    "salesorderdetails": 15,
+    "salesorders": 6,
+    "systemusers": 10,
+    "tasks": 36,
+    "transactioncurrencies": 4,
+    "uoms": 1,
+    "uomschedules": 1
   },
   "epoch": "2026-01-15T12:00:00.000Z",
   "files": [
     {
-      "bytes": 16954,
+      "bytes": 265961,
       "count": null,
       "path": "api/data/v9.2/$metadata.json",
-      "sha256": "9878f539ea568e0a2d96a1ee56a0b7e69e17c59f8f7df2f08fc991e566fa4b2f"
+      "sha256": "c114f34946b60a5d02fa5b03822fef4281207820c1a6dbae5e8ccdaff0a574ae"
     },
     {
       "bytes": 401,
@@ -26,6 +93,30 @@
       "count": 12,
       "path": "api/data/v9.2/accounts.json",
       "sha256": "a40888bedba63c8cb23d24a26f9254df078f93958ea2206e8cf3f9c4537d596c"
+    },
+    {
+      "bytes": 20377,
+      "count": 13,
+      "path": "api/data/v9.2/bookableresourcebookings.json",
+      "sha256": "ff55ddd001b45ee969c8da2c8b5021ebc13f018ab0c455b3b7374e94b65f458f"
+    },
+    {
+      "bytes": 3059,
+      "count": 4,
+      "path": "api/data/v9.2/bookableresources.json",
+      "sha256": "c2fe31ac5cda6d56ff19670a2c90ade4d20827734b7602efb1648dfbc5796bfc"
+    },
+    {
+      "bytes": 3698,
+      "count": 5,
+      "path": "api/data/v9.2/bookingstatuses.json",
+      "sha256": "8db2fb16ba89ef31c86a37aeca9f082948fcc4751446953cdc58e83f15cf58c2"
+    },
+    {
+      "bytes": 504,
+      "count": 1,
+      "path": "api/data/v9.2/businessunits.json",
+      "sha256": "9cb0bf95afc4a69ba7eeaf38d8a4ee6c1776110d1787aa24849da29e75718dfb"
     },
     {
       "bytes": 45715,
@@ -46,10 +137,166 @@
       "sha256": "c5e0477f2762452e32ac804a3ec3ef76a7331d3115bec94687f4c450faa489c1"
     },
     {
+      "bytes": 7305,
+      "count": 7,
+      "path": "api/data/v9.2/incidentresolutions.json",
+      "sha256": "3f31bdbbbf1e93a268e1d9b429381bc05821d1e30952d13168241b33b9a08634"
+    },
+    {
       "bytes": 39837,
       "count": 24,
       "path": "api/data/v9.2/incidents.json",
       "sha256": "241ae6dd8cd089f353104df4bd5c13e4e19b9c47e74631c14ef37214f8dd9451"
+    },
+    {
+      "bytes": 19997,
+      "count": 12,
+      "path": "api/data/v9.2/invoicedetails.json",
+      "sha256": "0c34f0925775f1a169d7f632e65c729e91e8c36e77c99531471ff3059501441d"
+    },
+    {
+      "bytes": 11030,
+      "count": 5,
+      "path": "api/data/v9.2/invoices.json",
+      "sha256": "2758f8baf92284c8530a1a27a8b2ba7d9374fb2dc616d6584b388bb3d9da7c03"
+    },
+    {
+      "bytes": 47295,
+      "count": 24,
+      "path": "api/data/v9.2/leads.json",
+      "sha256": "476cd76e1e2257845a1fec7555aba470cb776afb95c4b65daf555dbc5c4ff5b5"
+    },
+    {
+      "bytes": 27608,
+      "count": 18,
+      "path": "api/data/v9.2/msdyn_customerassets.json",
+      "sha256": "709a7f65bbe5ed3de6676814fc32f68629d4c956553c58381f53c78b161daf23"
+    },
+    {
+      "bytes": 3033,
+      "count": 4,
+      "path": "api/data/v9.2/msdyn_incidenttypes.json",
+      "sha256": "d96dd85f4e3c851fba39973db75112788e047b4d72b0c66d02904c7b78b0c710"
+    },
+    {
+      "bytes": 2239,
+      "count": 3,
+      "path": "api/data/v9.2/msdyn_priorities.json",
+      "sha256": "1605ffa11e203efcaffc90bb3047f653d21c277b4e977fc4de3610d02226dfaa"
+    },
+    {
+      "bytes": 15184,
+      "count": 15,
+      "path": "api/data/v9.2/msdyn_resourcerequirements.json",
+      "sha256": "7e40c1a08c54bbb9cd8fedc8792b1a50656a7452f904fccc29a7d95c5fd866ab"
+    },
+    {
+      "bytes": 4506,
+      "count": 6,
+      "path": "api/data/v9.2/msdyn_servicetasktypes.json",
+      "sha256": "d3e4b9b3271ac00e8b411a881c067594da54732984bef33a9ce9b7085c83661b"
+    },
+    {
+      "bytes": 20062,
+      "count": 15,
+      "path": "api/data/v9.2/msdyn_workorderincidents.json",
+      "sha256": "2e69c0b5ba42dfed5b23cc293117acb144f902df49ebf55ae759f4c2fac11a0e"
+    },
+    {
+      "bytes": 31627,
+      "count": 20,
+      "path": "api/data/v9.2/msdyn_workorderproducts.json",
+      "sha256": "02b8b53a418e629fbf236876be64a632a568432b18977572f8f1a5b54e6d13f3"
+    },
+    {
+      "bytes": 47387,
+      "count": 15,
+      "path": "api/data/v9.2/msdyn_workorders.json",
+      "sha256": "94b93f0f8b2a0b1305e7d2e967ac767a85cc15e49e963eb2437eb044a8cfd348"
+    },
+    {
+      "bytes": 20861,
+      "count": 15,
+      "path": "api/data/v9.2/msdyn_workorderservices.json",
+      "sha256": "65818659c0bf2714d8f24e1bec51838533103056cbb59397d37ba3a6bb6eea8f"
+    },
+    {
+      "bytes": 53268,
+      "count": 45,
+      "path": "api/data/v9.2/msdyn_workorderservicetasks.json",
+      "sha256": "042b8366b98e0d0f8ff621b176b946f5b5638dfa303991c56b3ca7172f7ec495"
+    },
+    {
+      "bytes": 2192,
+      "count": 3,
+      "path": "api/data/v9.2/msdyn_workordertypes.json",
+      "sha256": "9d1461791aa86215d2d0d9622ad12e08693b5350dfbf2fba29c39259fe0e8693"
+    },
+    {
+      "bytes": 36894,
+      "count": 15,
+      "path": "api/data/v9.2/opportunities.json",
+      "sha256": "62a851ae23b1ee750c940ca95aaaa839d03f4b97dae61b1b58e57dcdf77a8ef5"
+    },
+    {
+      "bytes": 8942,
+      "count": 8,
+      "path": "api/data/v9.2/opportunitycloses.json",
+      "sha256": "1cd128a796dd423933311bb77485a6a7e9a76b12b2007df66ce4fa726710e0fe"
+    },
+    {
+      "bytes": 55528,
+      "count": 36,
+      "path": "api/data/v9.2/opportunityproducts.json",
+      "sha256": "cbda22a09a0bafbb90601e931b4cd5491ae52d9ea976da1946bfb71939bfdf91"
+    },
+    {
+      "bytes": 4175,
+      "count": 4,
+      "path": "api/data/v9.2/pricelevels.json",
+      "sha256": "8f9a27ebadde55323936f01b1f896bb8e2ba979a719ed092a77353aa526791e6"
+    },
+    {
+      "bytes": 75831,
+      "count": 48,
+      "path": "api/data/v9.2/productpricelevels.json",
+      "sha256": "75514b53f89e26ee299f2c5b9e3fc35923a90591b6c2c01bbe177fb9b1dbed30"
+    },
+    {
+      "bytes": 19701,
+      "count": 12,
+      "path": "api/data/v9.2/products.json",
+      "sha256": "d091eb94e4bb429da6a3f969fc10bdc9d21b8876689a7fc6996f4728cc186daa"
+    },
+    {
+      "bytes": 44406,
+      "count": 30,
+      "path": "api/data/v9.2/quotedetails.json",
+      "sha256": "245cc3d05a2b80c6fb6e43a244e489ce622b40b630f76da18ee68851702aefdc"
+    },
+    {
+      "bytes": 24051,
+      "count": 12,
+      "path": "api/data/v9.2/quotes.json",
+      "sha256": "15afd5a251db5af6c6a25c76f79144ac587f3736d45b3ef84a37c0a35d23bf3f"
+    },
+    {
+      "bytes": 25845,
+      "count": 15,
+      "path": "api/data/v9.2/salesorderdetails.json",
+      "sha256": "dfdffb586bfc1f1cbf78d2a7bbf048c1bf00abb73eecfbb6323c33d2e9e095a1"
+    },
+    {
+      "bytes": 13215,
+      "count": 6,
+      "path": "api/data/v9.2/salesorders.json",
+      "sha256": "3c74d85eca0f2d3958c0cc34cd1e79b9cb85036807d5a079067fc354bf5c0c25"
+    },
+    {
+      "bytes": 7752,
+      "count": 10,
+      "path": "api/data/v9.2/systemusers.json",
+      "sha256": "5697d964719e7189e87f0371ca987101d5b3a9aaee5b612e1f37e0efce1194ad"
     },
     {
       "bytes": 35681,
@@ -58,12 +305,48 @@
       "sha256": "0dbc4c331639344113c8eba13955f9bde6422b7062df379cb6f9deffa8472536"
     },
     {
-      "bytes": 290558,
+      "bytes": 2479,
+      "count": 4,
+      "path": "api/data/v9.2/transactioncurrencies.json",
+      "sha256": "05cb908f30ad55ec3320f0de21d316b1be33835d783d98a03472ed7f22789dd9"
+    },
+    {
+      "bytes": 988,
+      "count": 1,
+      "path": "api/data/v9.2/uoms.json",
+      "sha256": "ff897c57b16069befbd46f87e6eb3b96336e25a3b38c57836ad07e5b7ff1a20f"
+    },
+    {
+      "bytes": 793,
+      "count": 1,
+      "path": "api/data/v9.2/uomschedules.json",
+      "sha256": "588b621562a63269acd69a42e34636507280e00ccd9243b7ac66b355d9c69d39"
+    },
+    {
+      "bytes": 257800,
+      "count": null,
+      "path": "data/schema.json",
+      "sha256": "4adef523e272e18f33bc7fa4da7931cef0b45e26780f3e79f6997a2e97ca841d"
+    },
+    {
+      "bytes": 1525852,
       "count": null,
       "path": "data/seed.json",
-      "sha256": "e8b7b175ffcef7bc0dbbb9cbb0ec9e3016cb1d3b905f7089c89700ecaf70d09c"
+      "sha256": "ff3a84fbb118aeb818a16b3ce6bdc2b3b15692caab94da14fcc4722263037950"
+    },
+    {
+      "bytes": 143301,
+      "count": null,
+      "path": "tenant-schema.mjs",
+      "sha256": "819ac6ef725d23fd1dea887d4d88eda45540c5411a0a5e07391d5f50a7c36baa"
     }
   ],
-  "generatedFrom": "data/source.json",
-  "schemaVersion": 1
+  "generatedFrom": [
+    "data/source.json",
+    "data/schema.json"
+  ],
+  "replayVersion": 3,
+  "schemaDigest": "fb657f4b0bd3961d30506f1e9a0f1c6001511f671a6664a5d41a9f87f5ec3c49",
+  "schemaVersion": 2,
+  "seedVersion": 3
 }

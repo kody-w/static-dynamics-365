@@ -132,6 +132,21 @@ svg {
   box-shadow: 0 1px 4px rgb(0 0 0 / 20%);
 }
 
+.simulator-disclosure {
+  position: fixed;
+  right: 10px;
+  bottom: 8px;
+  z-index: 20;
+  padding: 4px 7px;
+  color: var(--slate-700);
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid var(--slate-300);
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
 .icon-button,
 .plain-button {
   display: inline-flex;

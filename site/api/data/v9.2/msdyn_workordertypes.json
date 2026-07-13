@@ -1,0 +1,51 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#msdyn_workordertypes",
+  "@odata.count": 3,
+  "value": [
+    {
+      "@odata.etag": "W/\"4030d09d1d8be176abaaadc0\"",
+      "createdon": "2025-07-21T10:00:00.000Z",
+      "modifiedon": "2025-07-21T14:00:00.000Z",
+      "msdyn_description": "New equipment installation",
+      "msdyn_name": "Installation",
+      "msdyn_workordertypeid": "4062e1ca-a1d1-5c80-9d09-f83d138cc7fa",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"ec10f69aeb99449dc9328c3d\"",
+      "createdon": "2025-07-19T12:00:00.000Z",
+      "modifiedon": "2025-07-19T14:00:00.000Z",
+      "msdyn_description": "Corrective equipment service",
+      "msdyn_name": "Break/Fix",
+      "msdyn_workordertypeid": "c115df02-2ef6-5c91-b8e8-8d3ca183be53",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    },
+    {
+      "@odata.etag": "W/\"283f02732570256d8dd135ff\"",
+      "createdon": "2025-07-20T11:00:00.000Z",
+      "modifiedon": "2025-07-20T14:00:00.000Z",
+      "msdyn_description": "Scheduled maintenance",
+      "msdyn_name": "Preventive Maintenance",
+      "msdyn_workordertypeid": "cc4a6506-432b-5c3f-8379-2e91e2074a10",
+      "ownerid": "8b9bc9fd-005a-5266-a1af-ad79e9d499f0",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Morgan Ellis",
+      "owneridname": "Morgan Ellis",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active"
+    }
+  ]
+}

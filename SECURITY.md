@@ -24,6 +24,10 @@ This project is a static site with an in-memory injected runtime:
   dynamic code evaluation.
 - External record links accept only HTTP and HTTPS and open with `noopener noreferrer`.
 - The simulator is imported explicitly and does not replace global network APIs.
+- Customer Service, Sales, and Field Service share one in-memory tenant; there are no live Microsoft
+  calls, payment data, customer exports, precise GPS/maps, or technician tracking.
+- The normal shell persistently identifies the project as an independent simulator with synthetic
+  data.
 
 The static fixtures are public by design. They contain only fictional `.example` addresses, reserved
 555 phone numbers, deterministic identifiers, and synthetic business content. Never add real

@@ -29,6 +29,7 @@ jobs:
           node --check site/twin-core.mjs
           node --check site/app-helpers.mjs
           node --check site/app.mjs
+          node --check site/tenant-schema.mjs
       - name: Run Node tests
         run: node --test tests/*.test.mjs
       - name: Run Python tests

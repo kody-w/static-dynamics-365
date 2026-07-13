@@ -11,21 +11,25 @@ import {
   NAV_GROUPS,
   PAGE_SIZE,
   SYSTEM_VIEWS,
+  appRoute as buildAppRoute,
   applySystemView,
   caseStatusLabel,
   caseStatusReasonLabel,
   codeUnitCompare,
   combineActivities,
+  createFormPayload,
   dashboardComponents,
   editableSnapshotsEqual,
   formatUtc,
   gridCodeLabel,
   initializeLookupDraft,
   isRecordEditable,
+  lookupTargetsForApp,
   nextRovingTabIndex,
   normalizeEditableSnapshot,
   paginateRows,
   priorityLabel,
+  parseAppRoute,
   recordCommandActions,
   relatedActivities,
   relatedConnectionsForContact,
@@ -45,6 +49,7 @@ import {
   transitionPatch,
   updateSelection,
 } from "./app-helpers.mjs";
+import { TENANT_SCHEMA } from "./tenant-schema.mjs";
 
 const ENTITY_ROUTE = Object.freeze({
   accounts: "accounts",
@@ -52,6 +57,26 @@ const ENTITY_ROUTE = Object.freeze({
   incidents: "cases",
   tasks: "tasks",
   emails: "emails",
+  leads: "leads",
+  opportunities: "opportunities",
+  opportunityproducts: "opportunityproducts",
+  quotes: "quotes",
+  quotedetails: "quotedetails",
+  salesorders: "salesorders",
+  salesorderdetails: "salesorderdetails",
+  invoices: "invoices",
+  invoicedetails: "invoicedetails",
+  products: "products",
+  pricelevels: "pricelevels",
+  msdyn_workorders: "msdyn_workorders",
+  bookableresourcebookings: "bookableresourcebookings",
+  msdyn_customerassets: "msdyn_customerassets",
+  msdyn_workordertypes: "msdyn_workordertypes",
+  msdyn_incidenttypes: "msdyn_incidenttypes",
+  msdyn_priorities: "msdyn_priorities",
+  msdyn_workorderservicetasks: "msdyn_workorderservicetasks",
+  msdyn_workorderproducts: "msdyn_workorderproducts",
+  msdyn_resourcerequirements: "msdyn_resourcerequirements",
 });
 const ROUTE_ENTITY = Object.freeze({
   accounts: "accounts",
@@ -59,6 +84,26 @@ const ROUTE_ENTITY = Object.freeze({
   cases: "incidents",
   tasks: "tasks",
   emails: "emails",
+  leads: "leads",
+  opportunities: "opportunities",
+  opportunityproducts: "opportunityproducts",
+  quotes: "quotes",
+  quotedetails: "quotedetails",
+  salesorders: "salesorders",
+  salesorderdetails: "salesorderdetails",
+  invoices: "invoices",
+  invoicedetails: "invoicedetails",
+  products: "products",
+  pricelevels: "pricelevels",
+  msdyn_workorders: "msdyn_workorders",
+  bookableresourcebookings: "bookableresourcebookings",
+  msdyn_customerassets: "msdyn_customerassets",
+  msdyn_workordertypes: "msdyn_workordertypes",
+  msdyn_incidenttypes: "msdyn_incidenttypes",
+  msdyn_priorities: "msdyn_priorities",
+  msdyn_workorderservicetasks: "msdyn_workorderservicetasks",
+  msdyn_workorderproducts: "msdyn_workorderproducts",
+  msdyn_resourcerequirements: "msdyn_resourcerequirements",
 });
 const FORM_READ_ONLY = new Set([
   "ticketnumber",
@@ -122,7 +167,12 @@ const app = {
   route: null,
   activeForm: null,
   gridStates: new Map(),
-  dashboardId: "customer-service",
+  currentApp: "customer-service",
+  dashboardIds: new Map([
+    ["customer-service", "customer-service"],
+    ["sales", "sales-pipeline"],
+    ["field-service", "field-operations"],
+  ]),
   historyIndex: 0,
   historyRestoring: false,
   historyNavigating: false,
@@ -295,21 +345,87 @@ function refreshData() {
 }
 
 function currentHash() {
-  return window.location.hash.startsWith("#/") ? window.location.hash : "#/dashboard";
+  return window.location.hash.startsWith("#/") ? window.location.hash : "#/cs/dashboard";
 }
 
 function parseRoute(hash = currentHash()) {
-  const value = hash.slice(2);
-  const queryIndex = value.indexOf("?");
-  const pathText = queryIndex >= 0 ? value.slice(0, queryIndex) : value;
-  const queryText = queryIndex >= 0 ? value.slice(queryIndex + 1) : "";
-  const segments = pathText.split("/").filter(Boolean);
+  const parsed = parseAppRoute(hash);
   return {
     hash,
-    segments,
-    query: new URLSearchParams(queryText),
-    key: segments.join("/"),
+    segments: parsed.segments,
+    appId: parsed.appId,
+    prefixed: parsed.prefixed,
+    query: new URLSearchParams(parsed.query),
+    key: parsed.key,
   };
+}
+
+function appHash(path = "dashboard", appId = app.currentApp) {
+  return buildAppRoute(appId, path);
+}
+
+function updateAppShell(appId) {
+  const definition = TENANT_SCHEMA.apps[appId];
+  app.currentApp = appId;
+  dom.appSelector.querySelector("span").textContent = definition.label;
+  dom.sitemap.setAttribute("aria-label", `${definition.label} sitemap`);
+  dom.sitemap.querySelector(".mobile-nav-heading strong").textContent = definition.label;
+  const navigation = dom.sitemap.querySelector("nav");
+  navigation.replaceChildren();
+  definition.navigation.forEach((group, groupIndex) => {
+    const headingId = `nav-${definition.prefix}-${groupIndex}`;
+    const section = element("section", {
+      attributes: { "aria-labelledby": headingId },
+    });
+    section.append(element("h2", { id: headingId, text: group.label }));
+    for (const [id, label, route] of group.items) {
+      section.append(
+        element(
+          "a",
+          {
+            attributes: {
+              href: appHash(route, appId),
+              "data-nav": id,
+            },
+          },
+          [svgIcon("settings"), element("span", { text: label })],
+        ),
+      );
+    }
+    navigation.append(section);
+  });
+  const areaSwitcher = dom.sitemap.querySelector(".area-switcher");
+  areaSwitcher.setAttribute("href", appHash("dashboard", appId));
+  areaSwitcher.querySelector("span").textContent = definition.label;
+  document.querySelector(".product-name").setAttribute(
+    "href",
+    appHash("dashboard", appId),
+  );
+  const quickItems =
+    appId === "sales"
+      ? [
+          ["leads", "Lead"],
+          ["opportunities", "Opportunity"],
+          ["contacts", "Contact"],
+          ["accounts", "Account"],
+          ["tasks", "Task"],
+        ]
+      : [
+          ["contacts", "Contact"],
+          ["accounts", "Account"],
+          ["tasks", "Task"],
+          ...(appId === "customer-service" ? [["cases", "Case"]] : []),
+        ];
+  dom.quickMenu.replaceChildren(element("h2", { text: "Quick Create" }));
+  for (const [route, label] of quickItems) {
+    dom.quickMenu.append(
+      element("a", {
+        text: label,
+        attributes: { href: appHash(`${route}/new`, appId) },
+      }),
+    );
+  }
+  document.title = `Static Dynamics 365 — ${definition.label}`;
 }
 
 function formIsDirty() {
@@ -382,7 +498,7 @@ async function handlePopState(event) {
 
 function setActiveNavigation(route) {
   const first = route.segments[0] || "dashboard";
-  const key =
+  const legacyKey =
     first === "dashboard"
       ? "dashboards"
       : first === "cases"
@@ -390,6 +506,10 @@ function setActiveNavigation(route) {
         : first === "service-management"
           ? route.segments[1]
           : first;
+  const configured = TENANT_SCHEMA.apps[route.appId].navigation
+    .flatMap((group) => group.items)
+    .find((item) => item[2] === first);
+  const key = configured?.[0] || legacyKey;
   for (const anchor of dom.sitemap.querySelectorAll("[data-nav]")) {
     if (anchor.dataset.nav === key) anchor.setAttribute("aria-current", "page");
     else anchor.removeAttribute("aria-current");
@@ -397,17 +517,18 @@ function setActiveNavigation(route) {
 }
 
 function routeForRecord(entity, id) {
-  return `#/${ENTITY_ROUTE[entity]}/${id}`;
+  return appHash(`${ENTITY_ROUTE[entity]}/${id}`);
 }
 
 function ensureGridState(key, entity) {
-  if (!app.gridStates.has(key)) {
+  const appKey = `${app.currentApp}:${key}`;
+  if (!app.gridStates.has(appKey)) {
     const defaultView =
       entity === "activities"
         ? "all"
         : SYSTEM_VIEWS[entity]?.[0]?.id || "all";
     const config = ENTITY_UI[entity];
-    app.gridStates.set(key, {
+    app.gridStates.set(appKey, {
       view: defaultView,
       query: "",
       sortKey: entity === "activities" ? "activitydate" : config?.primary || "createdon",
@@ -416,7 +537,7 @@ function ensureGridState(key, entity) {
       selection: new Set(),
     });
   }
-  return app.gridStates.get(key);
+  return app.gridStates.get(appKey);
 }
 
 function badge(value) {
@@ -428,6 +549,21 @@ function badge(value) {
 
 function displayCell(entity, field, value, record) {
   const shown = gridCodeLabel(entity, field, value, app.twin.clock.now(), record);
+  const lookup = Object.entries(TENANT_SCHEMA.entities[entity]?.fields || {}).find(
+    ([, definition]) => definition.lookup?.displayField === field,
+  );
+  if (lookup) {
+    const [lookupField, definition] = lookup;
+    const target = definition.lookup.discriminator
+      ? record[definition.lookup.discriminator]
+      : definition.lookup.targets[0];
+    if (record[lookupField] && ENTITY_ROUTE[target]) {
+      return element("a", {
+        text: shown,
+        attributes: { href: routeForRecord(target, record[lookupField]) },
+      });
+    }
+  }
   if (
     field === "statecode" ||
     field === "prioritycode" ||
@@ -658,7 +794,7 @@ function renderGrid(entity, records, title, subtitle = "") {
   ]);
 
   dom.viewRoot.replaceChildren(
-    pageHeading(title, subtitle, "Customer Service"),
+    pageHeading(title, subtitle, TENANT_SCHEMA.apps[app.currentApp].label),
     toolbar,
     shell,
   );
@@ -685,11 +821,18 @@ async function selectedTransition(entity, action, state) {
   const result = await safeUiBatch(
     app.twin,
     eligible.map((record) => ({
-      input: `/api/data/v9.2/${entity}(${record[ENTITY_UI[entity].id]})`,
+      input:
+        entity === "incidents" && action === "resolve"
+          ? "/api/data/v9.2/CloseIncident"
+          : `/api/data/v9.2/${entity}(${record[ENTITY_UI[entity].id]})`,
       init: {
-        method: "PATCH",
+        method:
+          entity === "incidents" && action === "resolve" ? "POST" : "PATCH",
         headers: { "if-match": record["@odata.etag"] },
-        body: transitionPatch(entity, action, app.twin.clock.now()),
+        body:
+          entity === "incidents" && action === "resolve"
+            ? { IncidentId: record.incidentid, Status: 5 }
+            : transitionPatch(entity, action, app.twin.clock.now()),
       },
     })),
   );
@@ -732,10 +875,14 @@ async function deleteSelected(entity, state) {
 
 function setGridCommands(entity, records, state) {
   const commands = [];
-  if (!["activities", "emails"].includes(entity)) {
+  if (
+    entity !== "activities" &&
+    TENANT_SCHEMA.entities[entity]?.mutable &&
+    !["emails", "msdyn_workorders", "bookableresourcebookings"].includes(entity)
+  ) {
     commands.push(
       commandButton("New", "add", () => {
-        requestNavigation(`#/${ENTITY_ROUTE[entity]}/new`);
+        requestNavigation(appHash(`${ENTITY_ROUTE[entity]}/new`));
       }),
     );
   }
@@ -810,24 +957,33 @@ function renderGridRoute(entity, options = {}) {
 }
 
 function renderDashboard() {
+  const dashboardId =
+    app.dashboardIds.get(app.currentApp) ||
+    TENANT_SCHEMA.apps[app.currentApp].dashboards[0];
   const selector = element("select", {
     attributes: { "aria-label": "Choose dashboard" },
     on: {
       change: (event) => {
-        app.dashboardId = event.target.value;
+        app.dashboardIds.set(app.currentApp, event.target.value);
         renderDashboard();
       },
     },
   });
-  for (const [id, label] of [
-    ["customer-service", "Customer Service Dashboard"],
-    ["service-activity", "Service Activity Dashboard"],
-  ]) {
+  const dashboardLabels = {
+    "customer-service": "Customer Service Dashboard",
+    "service-activity": "Service Activity Dashboard",
+    "sales-pipeline": "Sales Pipeline",
+    "sales-performance": "Sales Performance",
+    "field-operations": "Field Service Operations",
+    "technician-day": "Technician Day",
+  };
+  for (const id of TENANT_SCHEMA.apps[app.currentApp].dashboards) {
+    const label = dashboardLabels[id];
     const option = element("option", { text: label, attributes: { value: id } });
-    if (id === app.dashboardId) option.selected = true;
+    if (id === dashboardId) option.selected = true;
     selector.append(option);
   }
-  const components = dashboardComponents(app.data, app.twin.clock.now(), app.dashboardId);
+  const components = dashboardComponents(app.data, app.twin.clock.now(), dashboardId);
   const headingTools = element("div", { className: "dashboard-toolbar" }, selector);
   const cards = element("section", {
     className: "metric-grid",
@@ -869,7 +1025,7 @@ function renderDashboard() {
     pageHeading(
       components.title,
       `Current as of ${formatUtc(app.twin.clock.now())}.`,
-      "My Work",
+      TENANT_SCHEMA.apps[app.currentApp].label,
       headingTools,
     ),
     element("div", { className: "dashboard-content" }, [cards, charts]),
@@ -888,7 +1044,11 @@ function editableField(field, definition) {
   const [name, label, kind, required] = definition;
   const form = app.activeForm;
   const value = form.draft[name] ?? "";
-  const writable = !FORM_READ_ONLY.has(name) && (form.isNew || form.editable);
+  const schemaField = TENANT_SCHEMA.entities[form.entity]?.fields[name];
+  const writable =
+    !FORM_READ_ONLY.has(name) &&
+    schemaField?.mutable !== false &&
+    (form.isNew || form.editable);
   const labelNode = element("label", { attributes: { for: `field-${name}` } }, [
     document.createTextNode(label),
     required ? element("span", { className: "required-mark", text: " *" }) : null,
@@ -954,49 +1114,101 @@ function editableField(field, definition) {
 function addCreateLookups(container) {
   const form = app.activeForm;
   const selectField = (definition) => {
-    const records = (app.data[definition.entity] || []).filter(
-      (record) => !definition.activeOnly || record.statecode === 0,
+    const targets = [...lookupTargetsForApp(definition, app.currentApp)];
+    const selectedType = definition.typeField
+      ? form.draft[definition.typeField] || targets[0].entity
+      : definition.entity;
+    const selectedOutsideScope = definition.targets?.find(
+      (target) => target.entity === selectedType,
     );
-    const select = element("select", {
-      id: `field-${definition.field}`,
-      attributes: {
-        name: definition.field,
-        required: definition.required ? "" : null,
-        "aria-required": definition.required ? "true" : "false",
-      },
-      dataset: { writable: "true", valueType: "text" },
-      on: {
-        change: (event) => {
-          form.draft[definition.field] = event.target.value;
-          if (definition.typeField) {
-            form.draft[definition.typeField] = definition.typeValue;
-          }
-          updateDirtyState();
+    if (
+      selectedOutsideScope &&
+      !targets.some((target) => target.entity === selectedType)
+    ) {
+      targets.push(selectedOutsideScope);
+    }
+    const recordHost = element("div");
+    const renderRecordOptions = () => {
+      const target =
+        targets.find(
+          (candidate) =>
+            candidate.entity ===
+            (definition.typeField
+              ? form.draft[definition.typeField]
+              : definition.entity),
+        ) || targets[0];
+      const records = (app.data[target.entity] || []).filter(
+        (record) =>
+          !definition.activeOnly || record.statecode === 0,
+      );
+      const select = element("select", {
+        id: `field-${definition.field}`,
+        attributes: {
+          name: definition.field,
+          required: definition.required ? "" : null,
+          "aria-required": definition.required ? "true" : "false",
+          disabled: !form.isNew && !form.editable ? "" : null,
         },
-      },
-    });
-    select.append(element("option", {
-      text: `Select ${definition.label.toLowerCase()}`,
-      attributes: { value: "" },
-    }));
-    for (const record of records) {
+        dataset: { writable: "true", valueType: "text" },
+        on: {
+          change: (event) => {
+            form.draft[definition.field] = event.target.value;
+            updateDirtyState();
+          },
+        },
+      });
       select.append(
         element("option", {
-          text: record[definition.textField],
-          attributes: { value: record[definition.idField] },
+          text: `Select ${definition.label.toLowerCase()}`,
+          attributes: { value: "" },
         }),
       );
+      for (const record of records) {
+        select.append(
+          element("option", {
+            text: record[target.textField],
+            attributes: { value: record[target.idField] },
+          }),
+        );
+      }
+      select.value = lookupControlValue(form.draft, definition.field);
+      recordHost.replaceChildren(select);
+    };
+    const children = [
+      element("label", {
+        text: `${definition.label}${definition.required ? " *" : ""}`,
+        attributes: { for: `field-${definition.field}` },
+      }),
+    ];
+    if (definition.typeField && targets.length > 1) {
+      const typeSelect = element("select", {
+        attributes: {
+          "aria-label": `${definition.label} record type`,
+          disabled: !form.isNew && !form.editable ? "" : null,
+        },
+        on: {
+          change: (event) => {
+            form.draft[definition.typeField] = event.target.value;
+            form.draft[definition.field] = "";
+            renderRecordOptions();
+            updateDirtyState();
+          },
+        },
+      });
+      for (const target of targets) {
+        typeSelect.append(
+          element("option", {
+            text: ENTITY_UI[target.entity].singular,
+            attributes: { value: target.entity },
+          }),
+        );
+      }
+      typeSelect.value = selectedType;
+      children.push(typeSelect);
     }
-    select.value = lookupControlValue(form.draft, definition.field);
-    container.append(
-      element("div", { className: "form-field" }, [
-        element("label", {
-          text: `${definition.label}${definition.required ? " *" : ""}`,
-          attributes: { for: `field-${definition.field}` },
-        }),
-        select,
-      ]),
-    );
+    children.push(recordHost);
+    container.append(element("div", { className: "form-field" }, children));
+    renderRecordOptions();
   };
   for (const definition of FORM_LOOKUPS[form.entity] || []) selectField(definition);
 }
@@ -1021,7 +1233,7 @@ function renderFormPanel(tabId) {
     return;
   }
   const grid = element("div", { className: "form-grid" });
-  if (tabId === "summary" && form.isNew) addCreateLookups(grid);
+  if (tabId === "summary") addCreateLookups(grid);
   for (const definition of FORM_FIELDS[form.entity]?.[tabId] || []) {
     grid.append(editableField(definition[0], definition));
   }
@@ -1059,6 +1271,36 @@ function relatedTable(title, columns, rows) {
 
 function renderRelatedPanel(container, entity, record) {
   const stack = element("div", { className: "related-stack" });
+  const appendEntityTable = (title, targetEntity, rows) => {
+    const config = ENTITY_UI[targetEntity];
+    const columns = config.columns.slice(0, 4).map(([field, label], index) => [
+      field,
+      label,
+      index === 0
+        ? (value, row) =>
+            element("a", {
+              text: gridCodeLabel(
+                targetEntity,
+                field,
+                value,
+                app.twin.clock.now(),
+                row,
+              ),
+              attributes: {
+                href: routeForRecord(targetEntity, row[config.id]),
+              },
+            })
+        : (value, row) =>
+            gridCodeLabel(
+              targetEntity,
+              field,
+              value,
+              app.twin.clock.now(),
+              row,
+            ),
+    ]);
+    stack.append(relatedTable(title, columns, rows));
+  };
   const activities = relatedActivities(entity, record, app.data, app.twin.clock.now());
   stack.append(
     relatedTable(
@@ -1103,6 +1345,75 @@ function renderRelatedPanel(container, entity, record) {
         contacts,
       ),
     );
+    appendEntityTable(
+      "Cases",
+      "incidents",
+      app.data.incidents.filter(
+        (item) =>
+          (item.customeridtype === "accounts" &&
+            item.customerid === record.accountid) ||
+          app.data.contacts.some(
+            (contact) =>
+              contact.parentcustomerid === record.accountid &&
+              item.primarycontactid === contact.contactid,
+          ),
+      ),
+    );
+    if (app.currentApp === "sales") {
+      appendEntityTable(
+        "Leads",
+        "leads",
+        app.data.leads.filter((item) => item.parentaccountid === record.accountid),
+      );
+      appendEntityTable(
+        "Opportunities",
+        "opportunities",
+        app.data.opportunities.filter(
+          (item) =>
+            item.parentaccountid === record.accountid ||
+            (item.customeridtype === "accounts" &&
+              item.customerid === record.accountid),
+        ),
+      );
+      for (const [title, target] of [
+        ["Quotes", "quotes"],
+        ["Orders", "salesorders"],
+        ["Invoices", "invoices"],
+      ]) {
+        appendEntityTable(
+          title,
+          target,
+          app.data[target].filter(
+            (item) =>
+              item.customeridtype === "accounts" &&
+              item.customerid === record.accountid,
+          ),
+        );
+      }
+    }
+    if (app.currentApp === "field-service") {
+      const workorders = app.data.msdyn_workorders.filter(
+        (item) => item.msdyn_serviceaccount === record.accountid,
+      );
+      appendEntityTable(
+        "Customer Assets",
+        "msdyn_customerassets",
+        app.data.msdyn_customerassets.filter(
+          (item) => item.msdyn_account === record.accountid,
+        ),
+      );
+      appendEntityTable("Work Orders", "msdyn_workorders", workorders);
+      const workorderIds = new Set(
+        workorders.map((item) => item.msdyn_workorderid),
+      );
+      appendEntityTable(
+        "Bookings",
+        "bookableresourcebookings",
+        app.data.bookableresourcebookings.filter((item) =>
+          workorderIds.has(item.msdyn_workorder),
+        ),
+      );
+    }
   }
   if (entity === "contacts") {
     const connections = relatedConnectionsForContact(
@@ -1130,8 +1441,443 @@ function renderRelatedPanel(container, entity, record) {
         connections,
       ),
     );
+    if (app.currentApp === "sales") {
+      appendEntityTable(
+        "Leads",
+        "leads",
+        app.data.leads.filter((item) => item.parentcontactid === record.contactid),
+      );
+      appendEntityTable(
+        "Opportunities",
+        "opportunities",
+        app.data.opportunities.filter(
+          (item) =>
+            item.parentcontactid === record.contactid ||
+            (item.customeridtype === "contacts" &&
+              item.customerid === record.contactid),
+        ),
+      );
+    }
+    if (app.currentApp === "field-service") {
+      appendEntityTable(
+        "Customer Assets",
+        "msdyn_customerassets",
+        app.data.msdyn_customerassets.filter(
+          (item) => item.msdyn_contact === record.contactid,
+        ),
+      );
+      appendEntityTable(
+        "Work Orders",
+        "msdyn_workorders",
+        app.data.msdyn_workorders.filter(
+          (item) => item.msdyn_reportedbycontact === record.contactid,
+        ),
+      );
+    }
+  }
+  if (entity === "incidents") {
+    appendEntityTable(
+      "Work Orders",
+      "msdyn_workorders",
+      app.data.msdyn_workorders.filter(
+        (item) => item.msdyn_servicerequest === record.incidentid,
+      ),
+    );
+  }
+  if (entity === "opportunities") {
+    appendEntityTable(
+      "Products",
+      "opportunityproducts",
+      app.data.opportunityproducts.filter(
+        (item) => item.opportunityid === record.opportunityid,
+      ),
+    );
+    appendEntityTable(
+      "Quotes",
+      "quotes",
+      app.data.quotes.filter(
+        (item) => item.opportunityid === record.opportunityid,
+      ),
+    );
+  }
+  if (entity === "quotes") {
+    appendEntityTable(
+      "Quote Lines",
+      "quotedetails",
+      app.data.quotedetails.filter((item) => item.quoteid === record.quoteid),
+    );
+    appendEntityTable(
+      "Orders",
+      "salesorders",
+      app.data.salesorders.filter((item) => item.quoteid === record.quoteid),
+    );
+  }
+  if (entity === "salesorders") {
+    appendEntityTable(
+      "Order Lines",
+      "salesorderdetails",
+      app.data.salesorderdetails.filter(
+        (item) => item.salesorderid === record.salesorderid,
+      ),
+    );
+    appendEntityTable(
+      "Invoices",
+      "invoices",
+      app.data.invoices.filter(
+        (item) => item.salesorderid === record.salesorderid,
+      ),
+    );
+  }
+  if (entity === "invoices") {
+    const lines = app.data.invoicedetails.filter(
+      (item) => item.invoiceid === record.invoiceid,
+    );
+    appendEntityTable("Invoice Lines", "invoicedetails", lines);
+    const productIds = new Set(lines.map((item) => item.productid));
+    appendEntityTable(
+      "Installed Customer Assets",
+      "msdyn_customerassets",
+      app.data.msdyn_customerassets.filter(
+        (item) =>
+          item.msdyn_account === record.customerid &&
+          productIds.has(item.msdyn_product),
+      ),
+    );
+  }
+  if (entity === "msdyn_workorders") {
+    for (const [title, target, field] of [
+      ["Bookings", "bookableresourcebookings", "msdyn_workorder"],
+      ["Service Tasks", "msdyn_workorderservicetasks", "msdyn_workorder"],
+      ["Products Used", "msdyn_workorderproducts", "msdyn_workorder"],
+      ["Resource Requirements", "msdyn_resourcerequirements", "msdyn_workorder"],
+    ]) {
+      appendEntityTable(
+        title,
+        target,
+        app.data[target].filter(
+          (item) => item[field] === record.msdyn_workorderid,
+        ),
+      );
+    }
+  }
+  if (entity === "msdyn_customerassets") {
+    appendEntityTable(
+      "Service History",
+      "msdyn_workorders",
+      app.data.msdyn_workorders.filter(
+        (item) => item.msdyn_customerasset === record.msdyn_customerassetid,
+      ),
+    );
   }
   container.append(stack);
+}
+
+function domainActionDescriptors(entity, record) {
+  if (
+    entity === "incidents" &&
+    record.statecode === 0
+  ) {
+    return [
+      {
+        action: "CreateWorkOrder",
+        label: "Create Work Order",
+        payload: () => ({ CaseId: record.incidentid }),
+        navigate: "msdyn_workorders",
+      },
+    ];
+  }
+  if (entity === "leads") {
+    return record.statecode === 0
+      ? [
+          {
+            action: "QualifyLead",
+            label: "Qualify",
+            payload: () => ({ LeadId: record.leadid, CreateOpportunity: true }),
+          },
+          {
+            action: "DisqualifyLead",
+            label: "Disqualify",
+            payload: () => ({ LeadId: record.leadid, Status: 4 }),
+            danger: true,
+          },
+        ]
+      : [
+          {
+            action: "ReopenLead",
+            label: "Reopen",
+            payload: () => ({ LeadId: record.leadid }),
+          },
+        ];
+  }
+  if (entity === "opportunities") {
+    return record.statecode === 0
+      ? [
+          {
+            action: "GenerateQuote",
+            label: "Generate Quote",
+            payload: () => ({ OpportunityId: record.opportunityid }),
+            navigate: "quotes",
+          },
+          {
+            action: "WinOpportunity",
+            label: "Close as Won",
+            payload: () => ({ OpportunityId: record.opportunityid }),
+          },
+          {
+            action: "LoseOpportunity",
+            label: "Close as Lost",
+            payload: () => ({ OpportunityId: record.opportunityid, Status: 4 }),
+            danger: true,
+          },
+        ]
+      : [
+          {
+            action: "ReopenOpportunity",
+            label: "Reopen",
+            payload: () => ({ OpportunityId: record.opportunityid }),
+          },
+        ];
+  }
+  if (entity === "quotes") {
+    if (record.statecode === 0) {
+      return [
+        {
+          action: "ActivateQuote",
+          label: "Activate",
+          payload: () => ({ QuoteId: record.quoteid }),
+        },
+      ];
+    }
+    if (record.statecode === 1) {
+      return [
+        {
+          action: "ReviseQuote",
+          label: "Revise",
+          payload: () => ({ QuoteId: record.quoteid }),
+          navigate: "quotes",
+        },
+        {
+          action: "ConvertQuoteToSalesOrder",
+          label: "Create Order",
+          payload: () => ({ QuoteId: record.quoteid }),
+          navigate: "salesorders",
+        },
+        {
+          action: "WinQuote",
+          label: "Win Quote",
+          payload: () => ({ QuoteId: record.quoteid }),
+        },
+        {
+          action: "CloseQuote",
+          label: "Close Quote",
+          payload: () => ({ QuoteId: record.quoteid, Status: 5 }),
+          danger: true,
+        },
+      ];
+    }
+    if (record.statecode === 2) {
+      return [
+        {
+          action: "ConvertQuoteToSalesOrder",
+          label: "Create Order",
+          payload: () => ({ QuoteId: record.quoteid }),
+          navigate: "salesorders",
+        },
+      ];
+    }
+  }
+  if (entity === "salesorders") {
+    if ([0, 1].includes(record.statecode)) {
+      return [
+        {
+          action: "FulfillSalesOrder",
+          label: "Fulfill",
+          payload: () => ({ SalesOrderId: record.salesorderid }),
+        },
+        {
+          action: "CancelSalesOrder",
+          label: "Cancel Order",
+          payload: () => ({ SalesOrderId: record.salesorderid }),
+          danger: true,
+        },
+      ];
+    }
+    if (record.statecode === 3) {
+      return [
+        {
+          action: "ConvertSalesOrderToInvoice",
+          label: "Create Invoice",
+          payload: () => ({ SalesOrderId: record.salesorderid }),
+          navigate: "invoices",
+        },
+      ];
+    }
+  }
+  if (entity === "invoices" && record.statecode === 0) {
+    return [
+      {
+        action: "MarkInvoicePaid",
+        label: "Mark Paid",
+        payload: () => ({ InvoiceId: record.invoiceid }),
+      },
+      {
+        action: "CancelInvoice",
+        label: "Cancel Invoice",
+        payload: () => ({ InvoiceId: record.invoiceid }),
+        danger: true,
+      },
+    ];
+  }
+  if (entity === "msdyn_workorders") {
+    if (record.statecode === 1) {
+      return [
+        {
+          action: "ReopenWorkOrder",
+          label: "Reopen",
+          payload: () => ({ WorkOrderId: record.msdyn_workorderid }),
+        },
+      ];
+    }
+    const actions = [];
+    if (record.msdyn_systemstatus === 690970000) {
+      actions.push({
+        action: "ScheduleWorkOrder",
+        label: "Schedule",
+        payload: () => {
+          const requirement = app.data.msdyn_resourcerequirements.find(
+            (candidate) =>
+              candidate.msdyn_workorder === record.msdyn_workorderid &&
+              candidate.msdyn_isprimary &&
+              candidate.statecode === 0,
+          );
+          const start = new Date(requirement.msdyn_fromdate);
+          const end = new Date(
+            Math.min(
+              start.valueOf() + 2 * 3600000,
+              Date.parse(requirement.msdyn_todate),
+            ),
+          );
+          return {
+            WorkOrderId: record.msdyn_workorderid,
+            ResourceId: app.data.bookableresources.find(
+              (resource) => resource.statecode === 0,
+            ).bookableresourceid,
+            StartTime: start.toISOString(),
+            EndTime: end.toISOString(),
+          };
+        },
+      });
+    }
+    if (record.msdyn_systemstatus === 690970001) {
+      actions.push({
+        action: "DispatchWorkOrder",
+        label: "Dispatch",
+        payload: () => ({ WorkOrderId: record.msdyn_workorderid }),
+      });
+      actions.push({
+        action: "StartWorkOrder",
+        label: "Start Service",
+        payload: () => ({ WorkOrderId: record.msdyn_workorderid }),
+      });
+    }
+    if (record.msdyn_systemstatus === 690970002) {
+      actions.push({
+        action: "CompleteWorkOrder",
+        label: "Complete",
+        payload: () => ({ WorkOrderId: record.msdyn_workorderid }),
+      });
+    }
+    actions.push({
+      action: "CancelWorkOrder",
+      label: "Cancel",
+      payload: () => ({ WorkOrderId: record.msdyn_workorderid }),
+      danger: true,
+    });
+    return actions;
+  }
+  if (entity === "bookableresourcebookings" && record.statecode === 0) {
+    return [
+      {
+        action: "CompleteBooking",
+        label: "Complete",
+        payload: () => ({ BookingId: record.bookableresourcebookingid }),
+      },
+      {
+        action: "CancelBooking",
+        label: "Cancel",
+        payload: () => ({ BookingId: record.bookableresourcebookingid }),
+        danger: true,
+      },
+    ];
+  }
+  return [];
+}
+
+async function runDomainAction(descriptor) {
+  const form = app.activeForm;
+  if (!form || form.isNew) return;
+  const decision = await showDialog({
+    title: descriptor.label,
+    content: form.dirty
+      ? `${descriptor.label} will save your edits first and then run atomically.`
+      : `${descriptor.label} will update this synthetic tenant atomically.`,
+    actions: [
+      { value: "back", label: "Back" },
+      {
+        value: "apply",
+        label: descriptor.label,
+        primary: !descriptor.danger,
+        danger: descriptor.danger,
+      },
+    ],
+    cancelValue: "back",
+  });
+  if (decision !== "apply") return;
+  let current = form.record;
+  if (form.dirty) {
+    current = await saveActiveForm({ rerender: false });
+    if (!current) return;
+  }
+  const outcome = await safeUiRequest(
+    app.twin,
+    (() => {
+      const action = TENANT_SCHEMA.actions.find(
+        (candidate) => candidate.name === descriptor.action,
+      );
+      const id = current[TENANT_SCHEMA.entities[action.bindingEntitySet].key];
+      return `/api/data/v9.2/${action.bindingEntitySet}(${id})/Microsoft.Dynamics.CRM.${action.name}`;
+    })(),
+    {
+      method: "POST",
+      headers: { "if-match": current["@odata.etag"] },
+      body: descriptor.payload(current),
+    },
+    { expectJson: true },
+  );
+  if (!outcome.ok) {
+    showToast(outcome.message, "error");
+    return;
+  }
+  refreshData();
+  showToast(`${descriptor.label} completed.`);
+  if (descriptor.navigate && outcome.data.primary) {
+    const config = ENTITY_UI[descriptor.navigate];
+    const created = outcome.data.created?.find(
+      (item) => item.entity === descriptor.navigate,
+    );
+    const id = created?.id || outcome.data.primary[config.id];
+    if (id) {
+      app.activeForm = null;
+      await requestNavigation(routeForRecord(descriptor.navigate, id), {
+        skipGuard: true,
+      });
+      return;
+    }
+  }
+  const latest = app.data[form.entity].find(
+    (record) => record[form.idField] === form.id,
+  );
+  if (latest) renderRecordForm(form.entity, latest);
 }
 
 function updateFormCommands() {
@@ -1146,7 +1892,7 @@ function updateFormCommands() {
   } else {
     for (const action of recordCommandActions(form.entity, form.record, {
       dirty: form.dirty,
-      entityEditable: form.entity !== "emails",
+      entityEditable: form.editable,
     })) {
       if (action.id === "back") continue;
       if (action.id === "save") {
@@ -1176,6 +1922,16 @@ function updateFormCommands() {
         );
       }
     }
+    for (const descriptor of domainActionDescriptors(form.entity, form.record)) {
+      commands.push(
+        commandButton(
+          descriptor.label,
+          descriptor.danger ? "cancel" : "check",
+          () => runDomainAction(descriptor),
+          { danger: descriptor.danger },
+        ),
+      );
+    }
   }
   setCommands(commands);
 }
@@ -1188,14 +1944,30 @@ function initializeForm(entity, record, isNew) {
       draft[field] = record?.[field] ?? "";
     }
   }
-  draft = initializeLookupDraft(entity, record, draft);
+  draft = initializeLookupDraft(entity, record, draft, app.currentApp);
+  const lineParents = {
+    opportunityproducts: ["opportunities", "opportunityid", "opportunityid"],
+    quotedetails: ["quotes", "quoteid", "quoteid"],
+    salesorderdetails: ["salesorders", "salesorderid", "salesorderid"],
+    invoicedetails: ["invoices", "invoiceid", "invoiceid"],
+  };
+  const lineParent = lineParents[entity];
+  const parentEditable =
+    !lineParent ||
+    app.data[lineParent[0]].find(
+      (candidate) => candidate[lineParent[2]] === record?.[lineParent[1]],
+    )?.statecode === 0;
+  const editable =
+    isNew ||
+    (parentEditable &&
+      isRecordEditable(entity, record, entity !== "emails"));
   app.activeForm = {
     entity,
     idField: config.id,
     id: record?.[config.id] || null,
     record,
     isNew,
-    editable: isNew || isRecordEditable(entity, record, entity !== "emails"),
+    editable,
     etag: record?.["@odata.etag"] || null,
     draft,
     baseline: normalizeEditableSnapshot(draft),
@@ -1221,9 +1993,8 @@ function renderRecordForm(entity, record, isNew = false) {
           ? record.directioncode
             ? "Sent"
             : "Received"
-          : record.statecode === 0
-            ? "Active"
-            : "Inactive";
+          : record["statecode@OData.Community.Display.V1.FormattedValue"] ||
+            (record.statecode === 0 ? "Active" : "Inactive");
   const shell = element("article", { className: "record-shell" });
   shell.append(
     element("header", { className: "record-header" }, [
@@ -1250,7 +2021,19 @@ function renderRecordForm(entity, record, isNew = false) {
     {
       id: "related",
       label: "Related",
-      disabled: isNew || !["accounts", "contacts", "incidents"].includes(entity),
+      disabled:
+        isNew ||
+        ![
+          "accounts",
+          "contacts",
+          "incidents",
+          "opportunities",
+          "quotes",
+          "salesorders",
+          "invoices",
+          "msdyn_workorders",
+          "msdyn_customerassets",
+        ].includes(entity),
     },
   ];
   form.tabs = tabDefinitions.map((definition, index) => {
@@ -1295,19 +2078,7 @@ function renderRecordForm(entity, record, isNew = false) {
 }
 
 function createPayload(form) {
-  const payload = {};
-  for (const section of ["summary", "details"]) {
-    for (const [field, , kind] of FORM_FIELDS[form.entity]?.[section] || []) {
-      if (FORM_READ_ONLY.has(field)) {
-        continue;
-      }
-      let value = form.draft[field];
-      if (value === "") continue;
-      if (kind === "number") value = Number(value);
-      payload[field] = value;
-    }
-  }
-  return { ...payload, ...lookupPayload(form.entity, form.draft) };
+  return createFormPayload(form.entity, form.draft);
 }
 
 function updatePayload(form) {
@@ -1324,7 +2095,7 @@ function updatePayload(form) {
       payload[field] = after === "" ? null : after;
     }
   }
-  return payload;
+  return { ...payload, ...lookupPayload(form.entity, form.draft, form.record) };
 }
 
 async function saveActiveForm(options = {}) {
@@ -1459,14 +2230,22 @@ async function transitionCurrentRecord(action) {
     transition: (saved) =>
       safeUiRequest(
         app.twin,
-        `/api/data/v9.2/${form.entity}(${form.id})`,
+        form.entity === "incidents" && action === "resolve"
+          ? "/api/data/v9.2/CloseIncident"
+          : `/api/data/v9.2/${form.entity}(${form.id})`,
         {
-          method: "PATCH",
+          method:
+            form.entity === "incidents" && action === "resolve"
+              ? "POST"
+              : "PATCH",
           headers: {
             "if-match": saved["@odata.etag"],
             prefer: "return=representation",
           },
-          body: transitionPatch(form.entity, action, app.twin.clock.now()),
+          body:
+            form.entity === "incidents" && action === "resolve"
+              ? { IncidentId: form.id, Status: 5 }
+              : transitionPatch(form.entity, action, app.twin.clock.now()),
         },
         { expectJson: true },
       ),
@@ -1495,7 +2274,7 @@ async function transitionCurrentRecord(action) {
     showToast(outcome.message, "error");
     return;
   }
-  const updated = outcome.data;
+  const updated = outcome.data.primary || outcome.data;
   refreshData();
   renderRecordForm(form.entity, updated);
   showToast("Status updated.");
@@ -1552,7 +2331,10 @@ async function deleteCurrentRecord() {
   refreshData();
   app.activeForm = null;
   showToast(`${ENTITY_UI[form.entity].singular} deleted.`);
-  await requestNavigation(`#/${ENTITY_ROUTE[form.entity]}`, { skipGuard: true, force: true });
+  await requestNavigation(appHash(ENTITY_ROUTE[form.entity]), {
+    skipGuard: true,
+    force: true,
+  });
 }
 
 async function renderRecordRoute(entity, id) {
@@ -1643,7 +2425,15 @@ function renderKnowledgeSearch() {
 function renderGlobalSearch(route) {
   const query = route.query.get("q") || "";
   const rows = [];
-  for (const entity of ["accounts", "contacts", "incidents"]) {
+  const searchable = Object.entries(TENANT_SCHEMA.entities)
+    .filter(
+      ([entity, definition]) =>
+        ENTITY_ROUTE[entity] &&
+        (definition.appScopes.includes(app.currentApp) ||
+          definition.appScopes.includes("shared")),
+    )
+    .map(([entity]) => entity);
+  for (const entity of searchable) {
     const config = ENTITY_UI[entity];
     const matches = searchRows(app.data[entity], config.search, query, (record, field, value) =>
       gridCodeLabel(entity, field, value, app.twin.clock.now(), record),
@@ -1681,7 +2471,7 @@ function renderGlobalSearch(route) {
     pageHeading(
       "Search Results",
       query ? `${rows.length} result(s) for “${query}”.` : "Enter a term in global search.",
-      "Customer Service",
+      TENANT_SCHEMA.apps[app.currentApp].label,
     ),
     element("div", { className: "record-panel" }, list),
   );
@@ -1943,6 +2733,12 @@ function renderApiSimulation() {
     element("p", {
       text: "This independent project is unaffiliated and is not a production service replacement.",
     }),
+    element("p", {
+      text: `Compatibility profile: ${TENANT_SCHEMA.compatibilityProfile.name} · source date ${TENANT_SCHEMA.compatibilityProfile.sourceDate} · trial parity unverified.`,
+    }),
+    element("p", {
+      text: TENANT_SCHEMA.simulatorPolicies.join(" "),
+    }),
   ]);
   dom.viewRoot.replaceChildren(
     pageHeading(
@@ -1965,8 +2761,13 @@ function renderNotFound() {
   dom.viewRoot.replaceChildren(
     element("div", { className: "error-state" }, [
       element("h1", { text: "Page not found" }),
-      element("p", { text: "Choose an area from the Customer Service Hub sitemap." }),
-      element("a", { text: "Go to Dashboards", attributes: { href: "#/dashboard" } }),
+      element("p", {
+        text: `Choose an area from the ${TENANT_SCHEMA.apps[app.currentApp].label} sitemap.`,
+      }),
+      element("a", {
+        text: "Go to Dashboards",
+        attributes: { href: appHash("dashboard") },
+      }),
     ]),
   );
   setCommands([]);
@@ -1975,8 +2776,22 @@ function renderNotFound() {
 
 async function renderRoute() {
   const token = ++app.navigationToken;
-  const route = parseRoute();
+  let route = parseRoute();
+  if (!route.prefixed) {
+    const query = route.query.toString();
+    const replacement = appHash(
+      `${route.key || "dashboard"}${query ? `?${query}` : ""}`,
+      "customer-service",
+    );
+    window.history.replaceState(
+      { appIndex: app.historyIndex },
+      "",
+      replacement,
+    );
+    route = parseRoute(replacement);
+  }
   app.route = route;
+  updateAppShell(route.appId);
   closeNavigation();
   closeFlyouts();
   setActiveNavigation(route);
@@ -2051,7 +2866,7 @@ function installShellEvents() {
   dom.globalSearch.addEventListener("submit", (event) => {
     event.preventDefault();
     const query = dom.globalSearchInput.value.trim();
-    requestNavigation(`#/search?q=${encodeURIComponent(query)}`);
+    requestNavigation(appHash(`search?q=${encodeURIComponent(query)}`));
   });
   document.addEventListener("click", (event) => {
     const anchor = event.target.closest("a");
@@ -2102,7 +2917,7 @@ async function boot() {
     });
     refreshData();
     if (!window.location.hash.startsWith("#/")) {
-      window.history.replaceState({ appIndex: 0 }, "", "#/dashboard");
+      window.history.replaceState({ appIndex: 0 }, "", "#/cs/dashboard");
     } else if (!Number.isSafeInteger(window.history.state?.appIndex)) {
       window.history.replaceState({ appIndex: 0 }, "", window.location.href);
     }

@@ -1,0 +1,66 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#transactioncurrencies",
+  "@odata.count": 4,
+  "value": [
+    {
+      "@odata.etag": "W/\"9a2b1e858b22cc53d2d24a62\"",
+      "createdon": "2025-07-22T09:00:00.000Z",
+      "currencyname": "Legacy US Dollar",
+      "currencyprecision": 2,
+      "currencysymbol": "$",
+      "exchangerate": "1.000000",
+      "isocurrencycode": "USD",
+      "modifiedon": "2025-07-22T14:00:00.000Z",
+      "statecode": 1,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Inactive",
+      "statuscode": 2,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Inactive",
+      "transactioncurrencyid": "49f7c8b2-a369-5162-8d4a-d93b91052450"
+    },
+    {
+      "@odata.etag": "W/\"9bd5d57bcee606aa8ce9a6d9\"",
+      "createdon": "2025-07-19T12:00:00.000Z",
+      "currencyname": "US Dollar",
+      "currencyprecision": 2,
+      "currencysymbol": "$",
+      "exchangerate": "1.000000",
+      "isocurrencycode": "USD",
+      "modifiedon": "2025-07-19T14:00:00.000Z",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active",
+      "transactioncurrencyid": "56a96ca3-617d-5f21-b41e-920cd77448a7"
+    },
+    {
+      "@odata.etag": "W/\"d25a271233f23ad35d451e8f\"",
+      "createdon": "2025-07-21T10:00:00.000Z",
+      "currencyname": "Euro",
+      "currencyprecision": 2,
+      "currencysymbol": "€",
+      "exchangerate": "0.918400",
+      "isocurrencycode": "EUR",
+      "modifiedon": "2025-07-21T14:00:00.000Z",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active",
+      "transactioncurrencyid": "c4567e52-c0fd-503e-9c98-3be8127d9517"
+    },
+    {
+      "@odata.etag": "W/\"f0b2b47c9d574dfa6a87a966\"",
+      "createdon": "2025-07-20T11:00:00.000Z",
+      "currencyname": "Canadian Dollar",
+      "currencyprecision": 2,
+      "currencysymbol": "C$",
+      "exchangerate": "1.348500",
+      "isocurrencycode": "CAD",
+      "modifiedon": "2025-07-20T14:00:00.000Z",
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "Active",
+      "transactioncurrencyid": "f7a07c06-1a26-5b8c-8335-7b872ce1a430"
+    }
+  ]
+}

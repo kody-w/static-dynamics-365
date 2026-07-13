@@ -1,0 +1,16 @@
+{
+  "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#businessunits",
+  "@odata.count": 1,
+  "value": [
+    {
+      "@odata.etag": "W/\"e4836a8a41c65740329f090a\"",
+      "businessunitid": "cd3284c6-4e2b-5595-8bda-d2dd19e03b69",
+      "createdon": "2023-07-30T12:00:00.000Z",
+      "isdisabled": false,
+      "modifiedon": "2025-10-17T12:00:00.000Z",
+      "name": "Aster Lane Office Systems",
+      "parentbusinessunitid": null,
+      "parentbusinessunitidname": null
+    }
+  ]
+}

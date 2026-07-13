@@ -1,19 +1,92 @@
+import { TENANT_CONFIG, TENANT_SCHEMA } from "./tenant-schema.mjs";
+
 const API_MARKER = "/api/data/v9.2/";
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?(Z|([+-])(\d{2}):(\d{2}))$/;
 const MUTATION_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 const RETRYABLE_STATUS = new Set([429, 503]);
 const MAX_DATE_MILLISECONDS = 8_640_000_000_000_000;
+const ACTION_DEFINITIONS = Object.freeze(
+  Object.fromEntries(TENANT_SCHEMA.actions.map((action) => [action.name, action])),
+);
 
-export const CASE_STATUS_REASONS = Object.freeze({
-  0: Object.freeze({ 1: "In Progress", 2: "On Hold", 3: "Waiting for Details", 4: "Researching" }),
-  1: Object.freeze({ 5: "Problem Solved", 1000: "Information Provided" }),
-  2: Object.freeze({ 6: "Canceled", 2000: "Merged" }),
-});
-const CASE_PRIORITY_LABELS = Object.freeze({ 1: "High", 2: "Normal", 3: "Low" });
-const CASE_ORIGIN_LABELS = Object.freeze({ 1: "Phone", 2: "Email", 3: "Web" });
-const CASE_TYPE_LABELS = Object.freeze({ 1: "Question", 2: "Problem", 3: "Request" });
-const CASE_STATE_LABELS = Object.freeze({ 0: "Active", 1: "Resolved", 2: "Canceled" });
+function optionMap(entity, field) {
+  return Object.freeze(
+    Object.fromEntries(
+      (TENANT_SCHEMA.entities[entity].fields[field]?.options || []).map((item) => [
+        item.value,
+        item.label,
+      ]),
+    ),
+  );
+}
+
+function runtimeType(field) {
+  const token = field.runtimeType;
+  return `${token}${field.nullable ? "?" : ""}`;
+}
+
+function deriveEntityDefinitions() {
+  const definitions = {};
+  for (const [entitySet, schema] of Object.entries(TENANT_SCHEMA.entities)) {
+    const fields = {};
+    const discriminators = {};
+    const ranges = {};
+    const readOnly = [];
+    for (const [name, field] of Object.entries(schema.fields)) {
+      if (name !== schema.key) fields[name] = runtimeType(field);
+      if (field.discriminator) discriminators[name] = Object.freeze([...field.discriminator]);
+      if (field.minimum !== undefined || field.maximum !== undefined) {
+        ranges[name] = Object.freeze([
+          field.minimum ?? Number.MIN_SAFE_INTEGER,
+          field.maximum ?? Number.MAX_SAFE_INTEGER,
+        ]);
+      }
+      if (!field.mutable || name === schema.key) readOnly.push(name);
+    }
+    definitions[entitySet] = Object.freeze({
+      id: schema.key,
+      logicalName: schema.logicalName,
+      primaryName: schema.primaryName,
+      required: Object.freeze([...schema.requiredOnCreate]),
+      statePairs: Object.freeze(
+        schema.statusPairs.map((pair) => `${pair.statecode}:${pair.statuscode}`),
+      ),
+      activeStatePairs: Object.freeze(
+        schema.activeStatusPairs.map(
+          (pair) => `${pair.statecode}:${pair.statuscode}`,
+        ),
+      ),
+      discriminators: Object.freeze(discriminators),
+      ranges: Object.freeze(ranges),
+      fields: Object.freeze(fields),
+      readOnly: Object.freeze(new Set(readOnly)),
+      mutable: schema.mutable,
+      deletePolicy: schema.deletePolicy,
+      appScopes: Object.freeze([...schema.appScopes]),
+      schema,
+    });
+  }
+  return Object.freeze(definitions);
+}
+
+export const ENTITY_DEFINITIONS = deriveEntityDefinitions();
+const caseStatusLabels = optionMap("incidents", "statuscode");
+export const CASE_STATUS_REASONS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(
+      TENANT_SCHEMA.entities.incidents.statusPairs.reduce((groups, pair) => {
+        groups[pair.statecode] ||= {};
+        groups[pair.statecode][pair.statuscode] = caseStatusLabels[pair.statuscode];
+        return groups;
+      }, {}),
+    ).map(([state, reasons]) => [state, Object.freeze(reasons)]),
+  ),
+);
+const CASE_PRIORITY_LABELS = optionMap("incidents", "prioritycode");
+const CASE_ORIGIN_LABELS = optionMap("incidents", "caseorigincode");
+const CASE_TYPE_LABELS = optionMap("incidents", "casetypecode");
+const CASE_STATE_LABELS = optionMap("incidents", "statecode");
 const EMAIL_DIRECTION_RULES = Object.freeze({
   true: Object.freeze({
     senderType: "systemusers",
@@ -30,211 +103,45 @@ const EMAIL_DIRECTION_RULES = Object.freeze({
     status: "Received",
   }),
 });
-
-const commonFields = {
-  ownerid: "guid",
-  owneridname: "string",
-  createdon: "datetime",
-  modifiedon: "datetime",
-  statecode: "integer",
-  statuscode: "integer",
-};
-
-export const ENTITY_DEFINITIONS = Object.freeze({
-  accounts: Object.freeze({
-    id: "accountid",
-    required: Object.freeze(["name"]),
-    statePairs: Object.freeze(["0:1", "1:2"]),
-    discriminators: Object.freeze({}),
-    ranges: Object.freeze({}),
-    fields: Object.freeze({
-      ...commonFields,
-      name: "string",
-      accountnumber: "string",
-      telephone1: "string?",
-      emailaddress1: "string?",
-      websiteurl: "url?",
-      address1_line1: "string?",
-      address1_city: "string?",
-      address1_stateorprovince: "string?",
-      address1_postalcode: "string?",
-      address1_country: "string?",
-      industrycode: "string?",
-      description: "string?",
-      primarycontactid: "guid?",
-      primarycontactidname: "string?",
-    }),
+const SALES_LINE_CONTRACTS = Object.freeze({
+  opportunityproducts: Object.freeze({
+    parentEntity: "opportunities",
+    parentField: "opportunityid",
   }),
-  contacts: Object.freeze({
-    id: "contactid",
-    required: Object.freeze(["firstname", "lastname", "parentcustomerid"]),
-    statePairs: Object.freeze(["0:1", "1:2"]),
-    discriminators: Object.freeze({}),
-    ranges: Object.freeze({ preferredcontactmethodcode: Object.freeze([1, 5]) }),
-    fields: Object.freeze({
-      ...commonFields,
-      firstname: "string",
-      lastname: "string",
-      fullname: "string",
-      emailaddress1: "string?",
-      telephone1: "string?",
-      jobtitle: "string?",
-      parentcustomerid: "guid",
-      parentcustomeridname: "string",
-      address1_city: "string?",
-      address1_stateorprovince: "string?",
-      preferredcontactmethodcode: "integer",
-    }),
+  quotedetails: Object.freeze({
+    parentEntity: "quotes",
+    parentField: "quoteid",
   }),
-  incidents: Object.freeze({
-    id: "incidentid",
-    required: Object.freeze(["title", "customerid", "customeridtype", "primarycontactid"]),
-    statePairs: Object.freeze([
-      "0:1", "0:2", "0:3", "0:4", "1:5", "1:1000", "2:6", "2:2000",
-    ]),
-    discriminators: Object.freeze({
-      customeridtype: Object.freeze(["accounts", "contacts"]),
-    }),
-    ranges: Object.freeze({
-      prioritycode: Object.freeze([1, 3]),
-      caseorigincode: Object.freeze([1, 3]),
-      casetypecode: Object.freeze([1, 3]),
-    }),
-    fields: Object.freeze({
-      ...commonFields,
-      ticketnumber: "string",
-      title: "string",
-      description: "string?",
-      customerid: "guid",
-      customeridname: "string",
-      customeridtype: "entity",
-      primarycontactid: "guid",
-      primarycontactidname: "string",
-      prioritycode: "integer",
-      caseorigincode: "integer",
-      casetypecode: "integer",
-      resolveby: "datetime?",
-      firstresponsesenton: "datetime?",
-      resolvedon: "datetime?",
-    }),
+  salesorderdetails: Object.freeze({
+    parentEntity: "salesorders",
+    parentField: "salesorderid",
   }),
-  tasks: Object.freeze({
-    id: "activityid",
-    required: Object.freeze(["subject", "scheduledend", "regardingobjectid"]),
-    statePairs: Object.freeze(["0:2", "0:3", "1:5", "2:6"]),
-    discriminators: Object.freeze({
-      regardingobjectidtype: Object.freeze(["accounts", "contacts", "incidents"]),
-    }),
-    ranges: Object.freeze({
-      prioritycode: Object.freeze([1, 3]),
-      percentcomplete: Object.freeze([0, 100]),
-    }),
-    fields: Object.freeze({
-      ...commonFields,
-      subject: "string",
-      description: "string?",
-      regardingobjectid: "guid",
-      regardingobjectidname: "string",
-      regardingobjectidtype: "entity",
-      scheduledend: "datetime",
-      actualend: "datetime?",
-      prioritycode: "integer",
-      percentcomplete: "integer",
-    }),
-  }),
-  emails: Object.freeze({
-    id: "activityid",
-    required: Object.freeze([
-      "subject",
-      "directioncode",
-      "fromaddress",
-      "toaddress",
-      "senderid",
-      "senderidtype",
-      "recipientid",
-      "recipientidtype",
-      "regardingobjectid",
-    ]),
-    statePairs: Object.freeze(["1:3", "1:4"]),
-    discriminators: Object.freeze({
-      senderidtype: Object.freeze(["accounts", "contacts", "systemusers"]),
-      recipientidtype: Object.freeze(["accounts", "contacts", "systemusers"]),
-      regardingobjectidtype: Object.freeze(["accounts", "contacts", "incidents"]),
-    }),
-    ranges: Object.freeze({}),
-    fields: Object.freeze({
-      ...commonFields,
-      subject: "string",
-      description: "string?",
-      directioncode: "boolean",
-      fromaddress: "string",
-      fromname: "string",
-      toaddress: "string",
-      toname: "string",
-      senderid: "guid",
-      senderidname: "string",
-      senderidtype: "entity",
-      recipientid: "guid",
-      recipientidname: "string",
-      recipientidtype: "entity",
-      regardingobjectid: "guid",
-      regardingobjectidname: "string",
-      regardingobjectidtype: "entity",
-      scheduledstart: "datetime?",
-      senton: "datetime?",
-    }),
-  }),
-  connections: Object.freeze({
-    id: "connectionid",
-    required: Object.freeze(["record1id", "record2id", "record1type", "record2type"]),
-    statePairs: Object.freeze(["0:1", "1:2"]),
-    discriminators: Object.freeze({
-      record1type: Object.freeze(["contacts"]),
-      record2type: Object.freeze(["contacts"]),
-    }),
-    ranges: Object.freeze({}),
-    fields: Object.freeze({
-      ...commonFields,
-      connectionpairid: "guid",
-      record1id: "guid",
-      record1idname: "string",
-      record1type: "entity",
-      record2id: "guid",
-      record2idname: "string",
-      record2type: "entity",
-      record1roleidname: "string?",
-      record2roleidname: "string?",
-      description: "string?",
-      effectivestart: "datetime?",
-      effectiveend: "datetime?",
-    }),
+  invoicedetails: Object.freeze({
+    parentEntity: "invoices",
+    parentField: "invoiceid",
   }),
 });
-
-const READ_ONLY_FIELDS = new Set([
-  "accountid",
-  "contactid",
-  "incidentid",
-  "activityid",
-  "connectionid",
-  "connectionpairid",
-  "createdon",
-  "modifiedon",
-  "owneridname",
-  "primarycontactidname",
-  "fullname",
-  "parentcustomeridname",
-  "customeridname",
-  "primarycontactidname",
-  "regardingobjectidname",
-  "senderidname",
-  "recipientidname",
-  "fromname",
-  "toname",
-  "record1idname",
-  "record2idname",
-  "resolvedon",
+const CLOSED_HEADER_ENTITIES = new Set([
+  "leads",
+  "opportunities",
+  "quotes",
+  "salesorders",
+  "invoices",
 ]);
+const WORK_ORDER_CHILD_ENTITIES = new Set([
+  "msdyn_resourcerequirements",
+  "msdyn_workorderservicetasks",
+  "msdyn_workorderproducts",
+  "msdyn_workorderservices",
+  "msdyn_workorderincidents",
+  "bookableresourcebookings",
+]);
+const TERMINAL_WORK_ORDER_STATUSES = new Set([
+  690970003,
+  690970004,
+  690970005,
+]);
+
 
 function assertJsonValue(value, path = "$", seen = new Set()) {
   if (value === null || typeof value === "string" || typeof value === "boolean") return;
@@ -634,6 +541,28 @@ export function parsePath(input) {
   if (path === "$metadata" || path === "$metadata.json") {
     return { kind: "metadata", query: url.searchParams, pathname: path };
   }
+  if (ACTION_DEFINITIONS[path]) {
+    return {
+      kind: "action",
+      action: path,
+      entity: ACTION_DEFINITIONS[path].bindingEntitySet,
+      query: url.searchParams,
+      pathname: path,
+    };
+  }
+  const boundAction = path.match(
+    /^([^/]+)\(([^)]+)\)\/(?:Microsoft\.Dynamics\.CRM\.)?([A-Za-z][A-Za-z0-9]*)$/,
+  );
+  if (boundAction && ACTION_DEFINITIONS[boundAction[3]]) {
+    return {
+      kind: "action",
+      action: boundAction[3],
+      entity: boundAction[1],
+      id: normalizedRecordId(boundAction[2]),
+      query: url.searchParams,
+      pathname: path,
+    };
+  }
   const recordOpen = path.indexOf("(");
   if (recordOpen >= 0) {
     if (!path.endsWith(")") || path.indexOf("(", recordOpen + 1) >= 0) {
@@ -690,7 +619,7 @@ function parseBody(body) {
   return clone(body);
 }
 
-function validateFieldType(field, type, value) {
+function validateFieldType(field, type, value, schemaField = null) {
   const nullable = type.endsWith("?");
   const base = nullable ? type.slice(0, -1) : type;
   if (value === null) {
@@ -700,6 +629,17 @@ function validateFieldType(field, type, value) {
   if (base === "string" && typeof value === "string") return value;
   if (base === "boolean" && typeof value === "boolean") return value;
   if (base === "integer" && Number.isSafeInteger(value)) return value;
+  if (base === "integer64" && Number.isSafeInteger(value)) return value;
+  if (base === "decimal" && typeof value === "string") {
+    const scale = schemaField?.scale;
+    if (
+      !Number.isInteger(scale) ||
+      !new RegExp(`^-?(?:0|[1-9]\\d*)\\.\\d{${scale}}$`).test(value)
+    ) {
+      throw new TypeError(`${field} must be a canonical scale-${scale} decimal string`);
+    }
+    return value;
+  }
   if (base === "guid") return normalizedRecordId(value);
   if (base === "datetime") return normalizeUtc(value, field);
   if (base === "entity" && typeof value === "string") return value;
@@ -718,32 +658,202 @@ function validateFieldType(field, type, value) {
   throw new TypeError(`${field} must be ${base}`);
 }
 
+function decimalUnits(value, scale, canonical = true) {
+  const pattern = canonical
+    ? new RegExp(`^-?(?:0|[1-9]\\d*)\\.\\d{${scale}}$`)
+    : /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
+  if (typeof value !== "string" || !pattern.test(value)) {
+    throw new TypeError(`value must be a scale-${scale} decimal`);
+  }
+  const negative = value.startsWith("-");
+  const unsigned = negative ? value.slice(1) : value;
+  const [whole, fraction = ""] = unsigned.split(".");
+  if (fraction.length > scale) throw new TypeError(`decimal exceeds scale ${scale}`);
+  const units = BigInt(`${whole}${fraction.padEnd(scale, "0")}`);
+  return negative ? -units : units;
+}
+
+function decimalText(units, scale) {
+  const negative = units < 0n;
+  const absolute = negative ? -units : units;
+  const digits = absolute.toString().padStart(scale + 1, "0");
+  const result =
+    scale === 0
+      ? digits
+      : `${digits.slice(0, -scale)}.${digits.slice(-scale)}`;
+  return negative && absolute !== 0n ? `-${result}` : result;
+}
+
+function roundDivide(numerator, denominator) {
+  const negative = numerator < 0n;
+  const absolute = negative ? -numerator : numerator;
+  const rounded = (absolute + denominator / 2n) / denominator;
+  return negative ? -rounded : rounded;
+}
+
+function minBigInt(...values) {
+  return values.reduce(
+    (minimum, value) => (value < minimum ? value : minimum),
+    values[0],
+  );
+}
+
+function multiplyDecimal(left, leftScale, right, rightScale, outputScale = 2) {
+  const product =
+    decimalUnits(left, leftScale) * decimalUnits(right, rightScale);
+  const reduction = leftScale + rightScale - outputScale;
+  const units =
+    reduction > 0
+      ? roundDivide(product, 10n ** BigInt(reduction))
+      : product * 10n ** BigInt(-reduction);
+  return decimalText(units, outputScale);
+}
+
+function compareSchemaBound(value, bound, schemaField) {
+  if (schemaField.runtimeType === "decimal") {
+    const scale = schemaField.scale;
+    const left = decimalUnits(value, scale);
+    const right = decimalUnits(String(bound), scale, false);
+    return left < right ? -1 : left > right ? 1 : 0;
+  }
+  return value < bound ? -1 : value > bound ? 1 : 0;
+}
+
+function validateFieldConstraints(entity, field, value) {
+  if (value === null || value === undefined) return value;
+  const definition = ENTITY_DEFINITIONS[entity];
+  const schemaField = definition.schema.fields[field];
+  const allowedDiscriminators = definition.discriminators[field];
+  if (allowedDiscriminators && !allowedDiscriminators.includes(value)) {
+    throw new TypeError(
+      `${field} must be one of ${allowedDiscriminators.join(", ")}`,
+    );
+  }
+  if (
+    schemaField.minimum !== undefined &&
+    compareSchemaBound(value, schemaField.minimum, schemaField) < 0
+  ) {
+    throw new TypeError(`${field} must be at least ${schemaField.minimum}`);
+  }
+  if (
+    schemaField.maximum !== undefined &&
+    compareSchemaBound(value, schemaField.maximum, schemaField) > 0
+  ) {
+    throw new TypeError(`${field} must be at most ${schemaField.maximum}`);
+  }
+  if (
+    schemaField.options &&
+    !schemaField.options.some((option) => option.value === value)
+  ) {
+    throw new TypeError(`${field} has an undeclared option value`);
+  }
+  return value;
+}
+
 function validatePayload(entity, body, method) {
   const definition = ENTITY_DEFINITIONS[entity];
+  if (!definition.mutable) {
+    throw new TypeError(`${entity} is read-only`);
+  }
   const clean = {};
   for (const [field, value] of Object.entries(body)) {
     if (field.startsWith("@") || field.includes("@OData.")) {
       throw new TypeError(`${field} is an annotation and cannot be written`);
     }
-    if (READ_ONLY_FIELDS.has(field) || field === definition.id) {
+    if (definition.readOnly.has(field) || field === definition.id) {
       throw new TypeError(`${field} is read-only`);
     }
     const type = definition.fields[field];
     if (!type) throw new TypeError(`${field} is not valid for ${entity}`);
-    clean[field] = validateFieldType(field, type, value);
-    const allowedDiscriminators = definition.discriminators[field];
-    if (allowedDiscriminators && !allowedDiscriminators.includes(clean[field])) {
-      throw new TypeError(
-        `${field} must be one of ${allowedDiscriminators.join(", ")}`,
-      );
-    }
-    const range = definition.ranges[field];
-    if (range && (clean[field] < range[0] || clean[field] > range[1])) {
-      throw new TypeError(`${field} must be between ${range[0]} and ${range[1]}`);
-    }
+    clean[field] = validateFieldType(
+      field,
+      type,
+      value,
+      definition.schema.fields[field],
+    );
+    validateFieldConstraints(entity, field, clean[field]);
   }
   if (method === "POST" && Object.keys(clean).length === 0) {
     throw new TypeError("create payload cannot be empty");
+  }
+  return clean;
+}
+
+function validateActionPayload(route, body) {
+  const descriptor = ACTION_DEFINITIONS[route.action];
+  if (!descriptor) throw new TypeError(`action ${route.action} is not registered`);
+  if (route.id && route.entity !== descriptor.bindingEntitySet) {
+    throw new TypeError(
+      `${route.action} must be bound to ${descriptor.bindingEntitySet}`,
+    );
+  }
+  const parameters = new Map(
+    descriptor.parameters.map((parameter) => [parameter.name, parameter]),
+  );
+  const clean = {};
+  for (const [name, value] of Object.entries(body)) {
+    const parameter = parameters.get(name);
+    if (!parameter) {
+      throw new TypeError(`${name} is not valid for action ${route.action}`);
+    }
+    if (value === null) {
+      if (!parameter.nullable) throw new TypeError(`${name} cannot be null`);
+      clean[name] = null;
+      continue;
+    }
+    const runtimeType =
+      parameter.type === "decimal" ? "decimal" : parameter.type;
+    const normalized = validateFieldType(
+      name,
+      runtimeType,
+      value,
+      parameter.type === "decimal" ? { scale: parameter.scale } : null,
+    );
+    if (parameter.minimum !== undefined) {
+      const below =
+        parameter.type === "decimal"
+          ? decimalUnits(normalized, parameter.scale) <
+            decimalUnits(String(parameter.minimum), parameter.scale, false)
+          : normalized < parameter.minimum;
+      if (below) throw new TypeError(`${name} is below its minimum`);
+    }
+    if (parameter.maximum !== undefined) {
+      const above =
+        parameter.type === "decimal"
+          ? decimalUnits(normalized, parameter.scale) >
+            decimalUnits(String(parameter.maximum), parameter.scale, false)
+          : normalized > parameter.maximum;
+      if (above) throw new TypeError(`${name} exceeds its maximum`);
+    }
+    if (parameter.values && !parameter.values.includes(normalized)) {
+      throw new TypeError(`${name} has an invalid value`);
+    }
+    clean[name] = normalized;
+  }
+  for (const parameter of descriptor.parameters) {
+    if (parameter.required && clean[parameter.name] === undefined) {
+      throw new TypeError(`${route.action} requires ${parameter.name}`);
+    }
+  }
+  const suppliedTargets = descriptor.targetParameters.filter(
+    (name) => clean[name] !== undefined,
+  );
+  if (!route.id && suppliedTargets.length === 0) {
+    throw new TypeError(
+      `${route.action} requires ${descriptor.targetParameters[0]}`,
+    );
+  }
+  if (
+    suppliedTargets.length > 1 &&
+    suppliedTargets.some((name) => clean[name] !== clean[suppliedTargets[0]])
+  ) {
+    throw new TypeError(`${route.action} target parameters disagree`);
+  }
+  if (
+    route.id &&
+    suppliedTargets.some((name) => clean[name] !== route.id)
+  ) {
+    throw new TypeError(`${route.action} payload target differs from its binding`);
   }
   return clean;
 }
@@ -756,7 +866,10 @@ function validateRequiredFields(entity, record) {
     }
   }
   const stateVector = `${record.statecode}:${record.statuscode}`;
-  if (!ENTITY_DEFINITIONS[entity].statePairs.includes(stateVector)) {
+  if (
+    ENTITY_DEFINITIONS[entity].statePairs.length &&
+    !ENTITY_DEFINITIONS[entity].statePairs.includes(stateVector)
+  ) {
     throw new TypeError(`statecode/statuscode pair ${stateVector} is invalid for ${entity}`);
   }
   if (entity === "emails") {
@@ -850,6 +963,7 @@ function queryFieldSchema(entity, field) {
   return {
     base: type.endsWith("?") ? type.slice(0, -1) : type,
     nullable: type.endsWith("?"),
+    scale: definition.schema.fields[field]?.scale,
   };
 }
 
@@ -870,6 +984,22 @@ function parseFilterLiteral(token, schema, field) {
       throw new TypeError(`$filter value for ${field} is outside the Int32 range`);
     }
     return token.value;
+  }
+  if (schema.base === "integer64") {
+    if (token.type !== "number" || !Number.isSafeInteger(token.value)) {
+      throw new TypeError(`$filter value for ${field} must be an Int64 literal`);
+    }
+    return token.value;
+  }
+  if (schema.base === "decimal") {
+    if (token.type !== "number") {
+      throw new TypeError(`$filter value for ${field} must be a decimal literal`);
+    }
+    try {
+      return decimalText(decimalUnits(token.raw, schema.scale, false), schema.scale);
+    } catch {
+      throw new TypeError(`$filter value for ${field} must fit scale ${schema.scale}`);
+    }
   }
   if (schema.base === "boolean") {
     if (token.type !== "boolean") {
@@ -965,9 +1095,19 @@ function compileFilter(source, entity) {
     }
     return (record) => {
       const actual = record[field] ?? null;
-      if (operator === "eq") return actual === expected;
-      if (operator === "ne") return actual !== expected;
+      const comparison =
+        schema.base === "decimal" && actual !== null && expected !== null
+          ? decimalUnits(actual, schema.scale) - decimalUnits(expected, schema.scale)
+          : null;
+      if (operator === "eq") return comparison === null ? actual === expected : comparison === 0n;
+      if (operator === "ne") return comparison === null ? actual !== expected : comparison !== 0n;
       if (actual === null || expected === null) return false;
+      if (comparison !== null) {
+        if (operator === "gt") return comparison > 0n;
+        if (operator === "ge") return comparison >= 0n;
+        if (operator === "lt") return comparison < 0n;
+        return comparison <= 0n;
+      }
       if (operator === "gt") return actual > expected;
       if (operator === "ge") return actual >= expected;
       if (operator === "lt") return actual < expected;
@@ -1041,6 +1181,11 @@ function applyQuery(records, route) {
         if (a === null || a === undefined) comparison = b === null || b === undefined ? 0 : -1;
         else if (b === null || b === undefined) comparison = 1;
         else if (typeof a === "number" && typeof b === "number") comparison = a - b;
+        else if (queryFieldSchema(route.entity, field)?.base === "decimal") {
+          const scale = queryFieldSchema(route.entity, field).scale;
+          const difference = decimalUnits(a, scale) - decimalUnits(b, scale);
+          comparison = difference < 0n ? -1 : difference > 0n ? 1 : 0;
+        }
         else comparison = codeUnitCompare(a, b);
         if (comparison) return direction === "desc" ? -comparison : comparison;
       }
@@ -1096,27 +1241,188 @@ function expectedEdmProperty(entity, field) {
   const type = {
     boolean: "Edm.Boolean",
     datetime: "Edm.DateTimeOffset",
+    decimal: "Edm.Decimal",
     entity: "Edm.String",
     guid: "Edm.Guid",
     integer: "Edm.Int32",
+    integer64: "Edm.Int64",
     string: "Edm.String",
     url: "Edm.String",
   }[base];
   return type ? { type, nullable } : null;
 }
 
+function authoritativeMetadata(entities) {
+  const entitySets = Object.entries(TENANT_SCHEMA.entities)
+    .sort(([left], [right]) => codeUnitCompare(left, right))
+    .map(([name, definition]) => {
+      const properties = [];
+      const navigationProperties = [];
+      for (const [fieldName, field] of Object.entries(definition.fields).sort(
+        ([left], [right]) => codeUnitCompare(left, right),
+      )) {
+        const property = {
+          name: fieldName,
+          type: field.edmType,
+          nullable: field.nullable,
+          mutable: field.mutable,
+          readOnly: !field.mutable,
+        };
+        for (const attribute of [
+          "scale",
+          "options",
+          "calculated",
+          "minimum",
+          "maximum",
+          "discriminator",
+          "formatted",
+        ]) {
+          if (Object.hasOwn(field, attribute)) {
+            property[attribute] = clone(field[attribute]);
+          }
+        }
+        if (field.lookup) {
+          property.lookup = clone(field.lookup);
+          navigationProperties.push({
+            name: fieldName,
+            targets: clone(field.lookup.targets),
+            displayField: field.lookup.displayField,
+            discriminator: field.lookup.discriminator ?? null,
+            deletePolicy: field.lookup.onDelete,
+          });
+        }
+        properties.push(property);
+      }
+      return {
+        name,
+        logicalName: definition.logicalName,
+        entityType: definition.entityType,
+        key: definition.key,
+        primaryName: definition.primaryName,
+        count: entities[name].length,
+        mutable: definition.mutable,
+        deletePolicy: definition.deletePolicy,
+        appScopes: clone(definition.appScopes),
+        properties,
+        navigationProperties,
+        statusPairs: clone(definition.statusPairs),
+        activeStatusPairs: clone(definition.activeStatusPairs),
+      };
+    });
+  return {
+    "@odata.context": TENANT_CONFIG.metadata.context,
+    namespace: TENANT_CONFIG.metadata.namespace,
+    version: TENANT_CONFIG.metadata.version,
+    schemaVersion: TENANT_CONFIG.metadata.schemaVersion,
+    schemaDigest: TENANT_CONFIG.metadata.schemaDigest,
+    compatibilityProfile: clone(TENANT_SCHEMA.compatibilityProfile),
+    simulatorPolicies: clone(TENANT_SCHEMA.simulatorPolicies),
+    apps: Object.values(TENANT_SCHEMA.apps).map(clone),
+    actions: TENANT_SCHEMA.actions.map(clone),
+    entitySets,
+  };
+}
+
+function authoritativeFixtureChains(entities) {
+  const find = (entity, predicate) => {
+    const record = entities[entity].find(predicate);
+    if (!record) throw new TypeError(`seed fixture anchor for ${entity} is missing`);
+    return record;
+  };
+  const quote = find("quotes", (record) => record.quotenumber === "QUO-260100");
+  const opportunity = find(
+    "opportunities",
+    (record) => record.opportunityid === quote.opportunityid,
+  );
+  const lead = find(
+    "leads",
+    (record) => record.leadid === opportunity.originatingleadid,
+  );
+  const order = find(
+    "salesorders",
+    (record) => record.quoteid === quote.quoteid,
+  );
+  const invoice = find(
+    "invoices",
+    (record) => record.salesorderid === order.salesorderid,
+  );
+  const invoiceLines = entities.invoicedetails.filter(
+    (record) => record.invoiceid === invoice.invoiceid,
+  );
+  const productIds = new Set(invoiceLines.map((record) => record.productid));
+  const assets = entities.msdyn_customerassets.filter(
+    (record) =>
+      record.msdyn_account === invoice.customerid &&
+      productIds.has(record.msdyn_product),
+  );
+
+  const incident = find(
+    "incidents",
+    (record) => record.ticketnumber === "CAS-260102",
+  );
+  const workorder = find(
+    "msdyn_workorders",
+    (record) => record.msdyn_servicerequest === incident.incidentid,
+  );
+  const requirement = find(
+    "msdyn_resourcerequirements",
+    (record) => record.msdyn_workorder === workorder.msdyn_workorderid,
+  );
+  const bookings = entities.bookableresourcebookings.filter(
+    (record) => record.msdyn_workorder === workorder.msdyn_workorderid,
+  );
+  return [
+    {
+      sourceKey: "anchor.sales.primary",
+      lead: lead.leadid,
+      opportunity: opportunity.opportunityid,
+      quote: quote.quoteid,
+      salesorder: order.salesorderid,
+      invoice: invoice.invoiceid,
+      invoicedetails: invoiceLines.map((record) => record.invoicedetailid),
+      customerassets: assets.map((record) => record.msdyn_customerassetid),
+    },
+    {
+      sourceKey: "anchor.field-service.primary",
+      incident: incident.incidentid,
+      customerasset: workorder.msdyn_customerasset,
+      workorder: workorder.msdyn_workorderid,
+      requirement: requirement.msdyn_resourcerequirementid,
+      bookings: bookings.map((record) => record.bookableresourcebookingid),
+      serviceTasks: entities.msdyn_workorderservicetasks
+        .filter(
+          (record) => record.msdyn_workorder === workorder.msdyn_workorderid,
+        )
+        .map((record) => record.msdyn_workorderservicetaskid),
+      products: entities.msdyn_workorderproducts
+        .filter(
+          (record) => record.msdyn_workorder === workorder.msdyn_workorderid,
+        )
+        .map((record) => record.msdyn_workorderproductid),
+    },
+  ];
+}
+
 function normalizeSeed(seed) {
   assertJsonValue(seed, "seed");
+  if (seed?.schemaVersion === 2) {
+    throw new TypeError(
+      "seed schemaVersion 2 is not compatible with the standalone multi-app schemaVersion 3 runtime; replay it with the archived v2 runtime",
+    );
+  }
   if (
     !seed ||
     typeof seed !== "object" ||
-    seed.schemaVersion !== 2 ||
+    seed.schemaVersion !== TENANT_CONFIG.formatVersions.seed ||
     !seed.entities ||
     !seed.epoch ||
     !seed.identity ||
-    !seed.metadata
+    !seed.metadata ||
+    !seed.schema
   ) {
-    throw new TypeError("seed must use schemaVersion 2 and include identity, metadata, epoch, and entities");
+    throw new TypeError(
+      "seed must use the generated schema version and include schema, identity, metadata, epoch, and entities",
+    );
   }
   const normalized = clone(seed);
   const exactKeys = (value, expected, path) => {
@@ -1132,7 +1438,20 @@ function normalizeSeed(seed) {
   };
   exactKeys(
     normalized,
-    ["schemaVersion", "epoch", "tenant", "identities", "identity", "metadata", "entities"],
+    [
+      "schemaVersion",
+      "epoch",
+      "tenant",
+      "identities",
+      "identity",
+      "compatibilityProfile",
+      "simulatorPolicies",
+      "schemaDigest",
+      "schema",
+      "metadata",
+      "fixtureChains",
+      "entities",
+    ],
     "seed",
   );
   exactKeys(
@@ -1146,51 +1465,59 @@ function normalizeSeed(seed) {
     }
   }
   normalized.epoch = normalizeUtc(normalized.epoch, "seed epoch");
+  if (
+    normalized.epoch !== TENANT_CONFIG.epoch ||
+    canonicalStringify(normalized.tenant) !==
+      canonicalStringify(TENANT_CONFIG.tenant)
+  ) {
+    throw new TypeError("seed epoch or tenant differs from generated runtime configuration");
+  }
+  if (
+    canonicalStringify(normalized.schema) !== canonicalStringify(TENANT_SCHEMA) ||
+    normalized.schemaDigest !== TENANT_CONFIG.metadata.schemaDigest ||
+    normalized.schemaVersion !== TENANT_SCHEMA.schemaVersion
+  ) {
+    throw new TypeError("seed schema or schema digest differs from the generated runtime schema");
+  }
+  if (
+    canonicalStringify(normalized.compatibilityProfile) !==
+      canonicalStringify(TENANT_SCHEMA.compatibilityProfile) ||
+    canonicalStringify(normalized.simulatorPolicies) !==
+      canonicalStringify(TENANT_SCHEMA.simulatorPolicies)
+  ) {
+    throw new TypeError("seed compatibility profile differs from the canonical schema");
+  }
   if (!Array.isArray(normalized.identities) || !normalized.identities.length) {
     throw new TypeError("seed must include at least one identity");
   }
   const identityIds = new Set();
   for (const [index, identity] of normalized.identities.entries()) {
     exactKeys(identity, ["systemuserid", "fullname", "title"], `seed identity ${index}`);
-    if (
-      !identity ||
-      typeof identity !== "object" ||
-      typeof identity.fullname !== "string" ||
-      !identity.fullname.trim() ||
-      typeof identity.title !== "string" ||
-      !identity.title.trim()
-    ) {
-      throw new TypeError(`seed identity ${index} is malformed`);
-    }
-    exactKeys(
-      normalized.identity,
-      [
-        "@odata.context",
-        "BusinessUnitId",
-        "OrganizationId",
-        "UserId",
-        "FullName",
-        "OrganizationUrl",
-        "Version",
-      ],
-      "seed WhoAmI identity",
-    );
     identity.systemuserid = normalizedRecordId(identity.systemuserid);
-    if (identityIds.has(identity.systemuserid)) throw new TypeError("seed identity ids must be unique");
+    if (
+      !identity.fullname?.trim() ||
+      !identity.title?.trim() ||
+      identityIds.has(identity.systemuserid)
+    ) {
+      throw new TypeError(`seed identity ${index} is malformed or duplicated`);
+    }
     identityIds.add(identity.systemuserid);
   }
+  exactKeys(
+    normalized.identity,
+    [
+      "@odata.context",
+      "BusinessUnitId",
+      "OrganizationId",
+      "UserId",
+      "FullName",
+      "OrganizationUrl",
+      "Version",
+    ],
+    "seed WhoAmI identity",
+  );
   for (const field of ["BusinessUnitId", "OrganizationId", "UserId"]) {
     normalized.identity[field] = normalizedRecordId(normalized.identity[field]);
-  }
-  if (
-    normalized.identity.UserId !== normalized.identities[0].systemuserid ||
-    normalized.identity.FullName !== normalized.identities[0].fullname ||
-    normalized.identity.OrganizationUrl !== normalized.tenant?.organizationUrl ||
-    normalized.identity.Version !== normalized.tenant.organizationVersion ||
-    normalized.identity["@odata.context"] !==
-      `${normalized.tenant.organizationUrl}/api/data/v9.2/$metadata#Microsoft.Dynamics.CRM.WhoAmIResponse`
-  ) {
-    throw new TypeError("seed identity does not match the canonical tenant identity");
   }
   const entityNames = Object.keys(ENTITY_DEFINITIONS).sort(codeUnitCompare);
   if (
@@ -1200,21 +1527,19 @@ function normalizeSeed(seed) {
     throw new TypeError("seed entity sets do not match the runtime schema");
   }
   const idsByEntity = {};
-  for (const entity of Object.keys(ENTITY_DEFINITIONS)) {
-    if (!Array.isArray(normalized.entities[entity])) {
-      throw new TypeError(`seed is missing ${entity}`);
-    }
-    const idField = ENTITY_DEFINITIONS[entity].id;
+  const recordsByEntity = {};
+  const allIds = new Set();
+  for (const entity of entityNames) {
+    const definition = ENTITY_DEFINITIONS[entity];
+    const records = normalized.entities[entity];
+    if (!Array.isArray(records)) throw new TypeError(`seed is missing ${entity}`);
     const ids = new Set();
-    for (const record of normalized.entities[entity]) {
+    const byId = new Map();
+    for (const record of records) {
       if (!record || typeof record !== "object" || Array.isArray(record)) {
         throw new TypeError(`seed ${entity} record must be an object`);
       }
-      const allowed = new Set([
-        idField,
-        "@odata.etag",
-        ...Object.keys(ENTITY_DEFINITIONS[entity].fields),
-      ]);
+      const allowed = new Set(["@odata.etag", ...Object.keys(definition.schema.fields)]);
       for (const [field, value] of Object.entries(record)) {
         if (field.includes("@OData.Community.Display.V1.FormattedValue")) {
           const base = field.split("@", 1)[0];
@@ -1223,169 +1548,120 @@ function normalizeSeed(seed) {
           }
           continue;
         }
-        if (!allowed.has(field)) throw new TypeError(`seed ${entity} field ${field} is undeclared`);
+        if (!allowed.has(field)) {
+          throw new TypeError(`seed ${entity} field ${field} is undeclared`);
+        }
       }
-      const id = normalizedRecordId(record[idField]);
-      if (ids.has(id)) throw new TypeError(`seed has duplicate ${entity} id ${id}`);
-      record[idField] = id;
+      const id = normalizedRecordId(record[definition.id]);
+      if (ids.has(id) || allIds.has(id)) {
+        throw new TypeError(`seed has duplicate id ${id}`);
+      }
+      record[definition.id] = id;
       ids.add(id);
-      for (const [field, type] of Object.entries(ENTITY_DEFINITIONS[entity].fields)) {
+      allIds.add(id);
+      byId.set(id, record);
+      for (const [field, type] of Object.entries(definition.fields)) {
         if (record[field] === undefined) {
           if (!type.endsWith("?")) throw new TypeError(`seed ${entity}.${field} is required`);
           continue;
         }
-        record[field] = validateFieldType(field, type, record[field]);
-        const allowedDiscriminators = ENTITY_DEFINITIONS[entity].discriminators[field];
-        if (allowedDiscriminators && !allowedDiscriminators.includes(record[field])) {
-          throw new TypeError(`seed ${entity}.${field} has an invalid discriminator`);
-        }
-        const range = ENTITY_DEFINITIONS[entity].ranges[field];
-        if (range && (record[field] < range[0] || record[field] > range[1])) {
-          throw new TypeError(`seed ${entity}.${field} is outside its declared range`);
-        }
+        record[field] = validateFieldType(
+          field,
+          type,
+          record[field],
+          definition.schema.fields[field],
+        );
+        validateFieldConstraints(entity, field, record[field]);
       }
       validateRequiredFields(entity, record);
     }
-    normalized.entities[entity].sort((a, b) => codeUnitCompare(a[idField], b[idField]));
+    records.sort((a, b) => codeUnitCompare(a[definition.id], b[definition.id]));
     idsByEntity[entity] = ids;
+    recordsByEntity[entity] = byId;
   }
-  const has = (entity, id) =>
-    entity === "systemusers" ? identityIds.has(id) : idsByEntity[entity]?.has(id);
-  for (const record of normalized.entities.accounts) {
-    if (!has("systemusers", record.ownerid)) throw new TypeError("seed account owner does not resolve");
-    if (record.primarycontactid && !has("contacts", record.primarycontactid)) {
-      throw new TypeError("seed account primary contact does not resolve");
-    }
-  }
-  for (const record of normalized.entities.contacts) {
-    if (!has("accounts", record.parentcustomerid)) throw new TypeError("seed contact parent does not resolve");
-    if (!has("systemusers", record.ownerid)) throw new TypeError("seed contact owner does not resolve");
-  }
-  for (const record of normalized.entities.incidents) {
-    if (!has(record.customeridtype, record.customerid)) throw new TypeError("seed case customer does not resolve");
-    if (!has("contacts", record.primarycontactid)) throw new TypeError("seed case primary contact does not resolve");
-    if (!has("systemusers", record.ownerid)) throw new TypeError("seed case owner does not resolve");
-  }
-  for (const entity of ["tasks", "emails"]) {
-    for (const record of normalized.entities[entity]) {
-      if (!has(record.regardingobjectidtype, record.regardingobjectid)) {
-        throw new TypeError(`seed ${entity} regarding lookup does not resolve`);
-      }
-      if (!has("systemusers", record.ownerid)) throw new TypeError(`seed ${entity} owner does not resolve`);
-      if (entity === "emails") {
-        if (!has(record.senderidtype, record.senderid) || !has(record.recipientidtype, record.recipientid)) {
-          throw new TypeError("seed email party lookup does not resolve");
-        }
-      }
-    }
-  }
-  const connectionsByPair = new Map();
-  for (const record of normalized.entities.connections) {
-    if (!has(record.record1type, record.record1id) || !has(record.record2type, record.record2id)) {
-      throw new TypeError("seed connection endpoint does not resolve");
-    }
-    const pair = connectionsByPair.get(record.connectionpairid) || [];
-    pair.push(record);
-    connectionsByPair.set(record.connectionpairid, pair);
-  }
-  for (const pair of connectionsByPair.values()) {
-    if (
-      pair.length !== 2 ||
-      pair[0].record1id !== pair[1].record2id ||
-      pair[0].record2id !== pair[1].record1id ||
-      pair[0].record1roleidname !== pair[1].record2roleidname ||
-      pair[0].record2roleidname !== pair[1].record1roleidname
-    ) {
-      throw new TypeError("seed connection reciprocal pair is invalid");
-    }
-  }
-  const metadataSets = normalized.metadata.entitySets;
-  exactKeys(
-    normalized.metadata,
-    ["@odata.context", "namespace", "version", "entitySets"],
-    "seed metadata",
-  );
-  if (
-    normalized.metadata["@odata.context"] !==
-      `${normalized.tenant.organizationUrl}/api/data/v9.2/$metadata` ||
-    normalized.metadata.namespace !== "StaticDynamics365" ||
-    normalized.metadata.version !== "9.2"
-  ) {
-    throw new TypeError("seed metadata header does not match the canonical tenant");
-  }
-  if (!Array.isArray(metadataSets) || metadataSets.length !== entityNames.length) {
-    throw new TypeError("seed metadata entity sets do not match the runtime schema");
-  }
+  const resolveName = (entity, id) => {
+    const record = recordsByEntity[entity]?.get(id);
+    if (!record) throw new TypeError(`seed lookup ${entity}(${id}) does not resolve`);
+    return record[ENTITY_DEFINITIONS[entity].primaryName];
+  };
   for (const entity of entityNames) {
-    const metadataSet = metadataSets.find((item) => item.name === entity);
-    const declared = new Set([
-      ENTITY_DEFINITIONS[entity].id,
-      ...Object.keys(ENTITY_DEFINITIONS[entity].fields),
-    ]);
-    if (
-      !metadataSet ||
-      metadataSet.key !== ENTITY_DEFINITIONS[entity].id ||
-      !Array.isArray(metadataSet.properties) ||
-      metadataSet.properties.length !== declared.size ||
-      metadataSet.properties.some((property) => !declared.has(property.name))
-    ) {
-      throw new TypeError(`seed metadata for ${entity} does not match the runtime schema`);
-    }
-    exactKeys(
-      metadataSet,
-      ["name", "entityType", "key", "count", "properties"],
-      `seed metadata set ${entity}`,
-    );
-    const singular = entity.endsWith("s") ? entity.slice(0, -1) : entity;
-    if (
-      metadataSet.entityType !== `StaticDynamics365.${singular}` ||
-      metadataSet.count !== normalized.entities[entity].length
-    ) {
-      throw new TypeError(`seed metadata set ${entity} has invalid identity or count`);
-    }
-    for (const property of metadataSet.properties) {
-      if (
-        !property ||
-        typeof property !== "object" ||
-        Array.isArray(property) ||
-        !["name,nullable,type", "name,nullable,options,type"].includes(
-          Object.keys(property).sort(codeUnitCompare).join(","),
-        )
-      ) {
-        throw new TypeError(`seed metadata property for ${entity} is malformed`);
-      }
-      const expected = expectedEdmProperty(entity, property.name);
-      if (
-        !expected ||
-        property.type !== expected.type ||
-        property.nullable !== expected.nullable
-      ) {
-        throw new TypeError(
-          `seed metadata property ${entity}.${property.name} has the wrong type`,
-        );
-      }
-      if (property.options !== undefined) {
+    const definition = ENTITY_DEFINITIONS[entity];
+    for (const record of normalized.entities[entity]) {
+      for (const [field, fieldSchema] of Object.entries(definition.schema.fields)) {
+        const lookup = fieldSchema.lookup;
+        if (!lookup || record[field] === null) continue;
+        const target = lookup.discriminator
+          ? record[lookup.discriminator]
+          : lookup.targets[0];
+        if (!lookup.targets.includes(target)) {
+          throw new TypeError(`seed ${entity}.${field} lookup discriminator is invalid`);
+        }
+        const expectedName = resolveName(target, record[field]);
         if (
-          !Array.isArray(property.options) ||
-          property.options.some(
-            (option) =>
-              !option ||
-              typeof option !== "object" ||
-              Object.keys(option).sort(codeUnitCompare).join(",") !== "label,value" ||
-              !Number.isSafeInteger(option.value) ||
-              typeof option.label !== "string" ||
-              !option.label,
-          )
+          record[lookup.displayField] !== expectedName ||
+          record[`${field}@OData.Community.Display.V1.FormattedValue`] !== expectedName
         ) {
-          throw new TypeError(
-            `seed metadata options for ${entity}.${property.name} are malformed`,
-          );
+          throw new TypeError(`seed ${entity}.${field} has stale lookup display data`);
         }
       }
     }
   }
+  const user = recordsByEntity.systemusers.get(normalized.identity.UserId);
+  if (
+    !user ||
+    user.fullname !== normalized.identity.FullName ||
+    user.businessunitid !== normalized.identity.BusinessUnitId ||
+    normalized.identity.OrganizationUrl !== normalized.tenant.organizationUrl ||
+    normalized.identity.Version !== normalized.tenant.organizationVersion ||
+    normalized.identity["@odata.context"] !==
+      `${normalized.tenant.organizationUrl}/api/data/v9.2/$metadata#Microsoft.Dynamics.CRM.WhoAmIResponse`
+  ) {
+    throw new TypeError("seed identity does not resolve to its user and business unit");
+  }
+  if (
+    canonicalStringify(normalized.identity) !==
+      canonicalStringify(TENANT_CONFIG.identity)
+  ) {
+    throw new TypeError("seed WhoAmI identity differs from generated runtime configuration");
+  }
+  for (const identity of normalized.identities) {
+    const stored = recordsByEntity.systemusers.get(identity.systemuserid);
+    if (
+      !stored ||
+      stored.fullname !== identity.fullname ||
+      stored.title !== identity.title
+    ) {
+      throw new TypeError("seed identity list differs from stored system users");
+    }
+  }
+  if (
+    canonicalStringify(normalized.identities) !==
+    canonicalStringify(TENANT_CONFIG.identities)
+  ) {
+    throw new TypeError("seed identities differ from generated runtime configuration");
+  }
+  const metadata = authoritativeMetadata(normalized.entities);
+  if (
+    canonicalStringify(normalized.metadata) !== canonicalStringify(metadata)
+  ) {
+    throw new TypeError("seed metadata differs from authoritative runtime metadata");
+  }
+  const fixtureChains = authoritativeFixtureChains(normalized.entities);
+  if (
+    canonicalStringify(normalized.fixtureChains) !==
+    canonicalStringify(fixtureChains)
+  ) {
+    throw new TypeError("seed fixture chains differ from authoritative records");
+  }
+  normalized.schema = clone(TENANT_SCHEMA);
+  normalized.schemaDigest = TENANT_CONFIG.metadata.schemaDigest;
+  normalized.compatibilityProfile = clone(TENANT_SCHEMA.compatibilityProfile);
+  normalized.simulatorPolicies = clone(TENANT_SCHEMA.simulatorPolicies);
+  normalized.metadata = metadata;
+  normalized.fixtureChains = fixtureChains;
   return normalized;
 }
+
 
 function cleanHeaders(headers) {
   return new TwinHeaders(headers).toObject();
@@ -1505,7 +1781,42 @@ export class TwinCore {
         this.entities[entity].set(id, record);
       }
     }
+    this._rebuildReverseIndex();
     this.idempotency = new Map();
+  }
+
+  _rebuildReverseIndex() {
+    this.reverseIndex = new Map();
+    for (const [entity, definition] of Object.entries(ENTITY_DEFINITIONS)) {
+      for (const record of this._records(entity)) {
+        for (const [field, fieldSchema] of Object.entries(definition.schema.fields)) {
+          const lookup = fieldSchema.lookup;
+          const targetId = record[field];
+          if (!lookup || targetId === null || targetId === undefined) continue;
+          const targetEntity = lookup.discriminator
+            ? record[lookup.discriminator]
+            : lookup.targets[0];
+          const indexKey = `${targetEntity}\0${targetId}`;
+          const references = this.reverseIndex.get(indexKey) || [];
+          references.push({
+            sourceEntity: entity,
+            sourceId: record[definition.id],
+            field,
+            displayField: lookup.displayField,
+            onDelete: lookup.onDelete,
+          });
+          this.reverseIndex.set(indexKey, references);
+        }
+      }
+    }
+    for (const references of this.reverseIndex.values()) {
+      references.sort((left, right) =>
+        codeUnitCompare(
+          `${left.sourceEntity}/${left.sourceId}/${left.field}`,
+          `${right.sourceEntity}/${right.sourceId}/${right.field}`,
+        ),
+      );
+    }
   }
 
   setFaultPlan(plans = [], options = {}) {
@@ -1625,119 +1936,131 @@ export class TwinCore {
   _resolveName(entity, id) {
     const record = this._lookup(entity, id);
     if (!record) throw new TypeError(`${entity} lookup ${id} does not resolve`);
-    if (entity === "accounts") return record.name;
-    if (entity === "contacts") return record.fullname;
-    if (entity === "incidents") return record.title;
-    return record.subject || id;
+    return record[ENTITY_DEFINITIONS[entity].primaryName];
   }
 
   _identity(id = null) {
-    const identities = this.initialSeed.identities || [];
-    const selected = id
-      ? identities.find((item) => item.systemuserid === id)
-      : identities[0];
-    if (!selected) throw new TypeError(`system user lookup ${id} does not resolve`);
+    const selectedId = id || this.initialSeed.identity.UserId;
+    const selected = this._lookup("systemusers", selectedId);
+    if (!selected) throw new TypeError(`system user lookup ${selectedId} does not resolve`);
     return selected;
   }
 
   _decorateLookups(entity, record) {
-    if (entity === "accounts") {
-      record.primarycontactidname = record.primarycontactid
-        ? this._resolveName("contacts", record.primarycontactid)
-        : null;
-    } else if (entity === "contacts") {
-      record.parentcustomeridname = this._resolveName("accounts", record.parentcustomerid);
-    } else if (entity === "incidents") {
-      record.customeridname = this._resolveName(record.customeridtype, record.customerid);
-      record.primarycontactidname = this._resolveName("contacts", record.primarycontactid);
-    } else if (entity === "tasks") {
-      record.regardingobjectidtype = record.regardingobjectidtype || "incidents";
-      record.regardingobjectidname = this._resolveName(
-        record.regardingobjectidtype,
-        record.regardingobjectid,
-      );
-    } else if (entity === "emails") {
-      record.regardingobjectidtype = record.regardingobjectidtype || "incidents";
-      record.regardingobjectidname = this._resolveName(
-        record.regardingobjectidtype,
-        record.regardingobjectid,
-      );
-      record.senderidname = this._resolvePartyName(record.senderidtype, record.senderid);
-      record.recipientidname = this._resolvePartyName(record.recipientidtype, record.recipientid);
-      record.fromname = record.senderidname;
-      record.toname = record.recipientidname;
-    } else if (entity === "connections") {
-      record.record1idname = this._resolveName(record.record1type, record.record1id);
-      record.record2idname = this._resolveName(record.record2type, record.record2id);
+    const definition = ENTITY_DEFINITIONS[entity];
+    if (entity === "contacts") {
+      record.fullname = `${record.firstname} ${record.lastname}`.trim();
     }
-    const owner = this._identity(record.ownerid);
-    record.owneridname = owner.fullname;
-    if (entity === "contacts") record.fullname = `${record.firstname} ${record.lastname}`.trim();
+    if (entity === "leads") {
+      record.fullname = `${record.firstname} ${record.lastname}`.trim();
+    }
     const formatted = (field, value) => {
-      record[`${field}@OData.Community.Display.V1.FormattedValue`] = value;
+      const annotation = `${field}@OData.Community.Display.V1.FormattedValue`;
+      if (value === null || value === undefined) delete record[annotation];
+      else record[annotation] = String(value);
     };
-    formatted("ownerid", record.owneridname);
-    if (entity === "accounts" && record.primarycontactid) {
-      formatted("primarycontactid", record.primarycontactidname);
-    } else if (entity === "accounts") {
-      delete record["primarycontactid@OData.Community.Display.V1.FormattedValue"];
-    }
-    if (entity === "contacts") formatted("parentcustomerid", record.parentcustomeridname);
-    if (entity === "incidents") {
-      formatted("customerid", record.customeridname);
-      formatted("primarycontactid", record.primarycontactidname);
-      formatted("prioritycode", CASE_PRIORITY_LABELS[record.prioritycode] || "Unknown");
-      formatted("caseorigincode", CASE_ORIGIN_LABELS[record.caseorigincode] || "Unknown");
-      formatted("casetypecode", CASE_TYPE_LABELS[record.casetypecode] || "Unknown");
-      formatted("statecode", CASE_STATE_LABELS[record.statecode] || "Unknown");
-      formatted("statuscode", CASE_STATUS_REASONS[record.statecode]?.[record.statuscode] || "Unknown");
-    }
-    if (entity === "tasks" || entity === "emails") {
-      formatted("regardingobjectid", record.regardingobjectidname);
+    for (const [field, fieldSchema] of Object.entries(definition.schema.fields)) {
+      const lookup = fieldSchema.lookup;
+      if (lookup) {
+        if (record[field] === null || record[field] === undefined) {
+          record[lookup.displayField] = null;
+          formatted(field, null);
+        } else {
+          const target = lookup.discriminator
+            ? record[lookup.discriminator]
+            : lookup.targets[0];
+          if (!lookup.targets.includes(target)) {
+            throw new TypeError(`${entity}.${field} lookup discriminator is invalid`);
+          }
+          const name = this._resolveName(target, record[field]);
+          record[lookup.displayField] = name;
+          formatted(field, name);
+        }
+      }
+      if (
+        fieldSchema.options &&
+        fieldSchema.formatted &&
+        record[field] !== null &&
+        record[field] !== undefined
+      ) {
+        const option = fieldSchema.options.find((item) => item.value === record[field]);
+        if (!option) throw new TypeError(`${entity}.${field} option is invalid`);
+        formatted(field, option.label);
+      }
     }
     if (entity === "emails") {
-      formatted("senderid", record.senderidname);
-      formatted("recipientid", record.recipientidname);
-    }
-    if (entity === "connections") {
-      formatted("record1id", record.record1idname);
-      formatted("record2id", record.record2idname);
+      record.fromname = record.senderidname;
+      record.toname = record.recipientidname;
     }
     return record;
   }
 
   _resolvePartyName(type, id) {
-    if (type === "systemusers") return this._identity(id).fullname;
-    if (!["accounts", "contacts"].includes(type)) {
+    if (!ENTITY_DEFINITIONS[type]) {
       throw new TypeError(`party type ${type} is not supported`);
     }
     return this._resolveName(type, id);
   }
 
-  _defaults(entity, logicalId, payload = {}) {
+
+  _defaults(entity, logicalId, payload = {}, internal = false) {
+    const definition = ENTITY_DEFINITIONS[entity];
+    if (!definition.mutable && !internal) throw new TypeError(`${entity} is read-only`);
     const owner = this._identity();
     const now = this.clock.now();
-    const base = {
-      ownerid: owner.systemuserid,
-      owneridname: owner.fullname,
-      createdon: now,
-      modifiedon: now,
-    };
-    const sequence = String(Number.parseInt(sha256(logicalId).slice(0, 8), 16) % 100000).padStart(5, "0");
-    if (entity === "accounts") {
-      return {
-        ...base,
-        accountnumber: `AST-R${sequence}`,
-        statecode: 0,
-        statuscode: 1,
-      };
+    const result = {};
+    for (const [field, fieldSchema] of Object.entries(definition.schema.fields)) {
+      if (field === definition.id) continue;
+      if (fieldSchema.nullable) result[field] = null;
+      if (fieldSchema.calculated) {
+        if (fieldSchema.runtimeType === "decimal") {
+          result[field] = decimalText(0n, fieldSchema.scale);
+        } else if (fieldSchema.runtimeType === "integer") result[field] = 0;
+        else if (fieldSchema.runtimeType === "boolean") result[field] = false;
+        else if (fieldSchema.runtimeType === "string") result[field] = "";
+      }
+      if (fieldSchema.runtimeType === "decimal" && result[field] === undefined) {
+        result[field] = decimalText(0n, fieldSchema.scale);
+      }
+      if (fieldSchema.runtimeType === "boolean" && result[field] === undefined) {
+        result[field] = false;
+      }
+      if (fieldSchema.options && result[field] === undefined) {
+        result[field] = fieldSchema.options[0].value;
+      }
+      if (
+        fieldSchema.runtimeType === "integer" &&
+        result[field] === undefined &&
+        fieldSchema.minimum !== undefined
+      ) {
+        result[field] = fieldSchema.minimum;
+      }
     }
-    if (entity === "contacts") {
-      return { ...base, preferredcontactmethodcode: 2, statecode: 0, statuscode: 1 };
+    if (definition.schema.fields.ownerid) {
+      result.ownerid = owner.systemuserid;
+      result.owneridname = owner.fullname;
     }
+    if (definition.schema.fields.createdon) result.createdon = now;
+    if (definition.schema.fields.modifiedon) result.modifiedon = now;
+    if (definition.statePairs.length) {
+      const [statecode, statuscode] = definition.statePairs[0].split(":").map(Number);
+      result.statecode = statecode;
+      result.statuscode = statuscode;
+    }
+    const currency = this._records("transactioncurrencies").find(
+      (record) => record.isocurrencycode === "USD" && record.statecode === 0,
+    );
+    if (definition.schema.fields.transactioncurrencyid && currency) {
+      result.transactioncurrencyid = currency.transactioncurrencyid;
+      result.transactioncurrencyidname = currency.currencyname;
+    }
+    const sequence = String(
+      Number.parseInt(sha256(logicalId).slice(0, 8), 16) % 100000,
+    ).padStart(5, "0");
+    if (entity === "accounts") result.accountnumber = `AST-R${sequence}`;
+    if (entity === "contacts") result.preferredcontactmethodcode = 2;
     if (entity === "incidents") {
-      return {
-        ...base,
+      Object.assign(result, {
         ticketnumber: `CAS-R${sequence}`,
         prioritycode: 2,
         caseorigincode: 2,
@@ -1747,33 +2070,32 @@ export class TwinCore {
         resolveby: new Date(this.clock.valueOf() + 6 * 86400000).toISOString(),
         firstresponsesenton: null,
         resolvedon: null,
-      };
+      });
     }
     if (entity === "tasks") {
-      return {
-        ...base,
+      Object.assign(result, {
         regardingobjectidtype: "incidents",
         prioritycode: 2,
         percentcomplete: 0,
         actualend: null,
         statecode: 0,
         statuscode: 2,
-      };
+      });
     }
     if (entity === "emails") {
-      const rule = EMAIL_DIRECTION_RULES[String(payload.directioncode)] || EMAIL_DIRECTION_RULES.true;
-      return {
-        ...base,
+      const direction = payload.directioncode ?? result.directioncode;
+      const rule = EMAIL_DIRECTION_RULES[String(direction)];
+      Object.assign(result, {
+        directioncode: direction,
         regardingobjectidtype: "incidents",
         scheduledstart: now,
         senton: now,
         statecode: rule.statecode,
         statuscode: rule.statuscode,
-      };
+      });
     }
     if (entity === "connections") {
-      return {
-        ...base,
+      Object.assign(result, {
         connectionpairid: deterministicGuid(`${this.seedDigest}/${logicalId}/pair`),
         record1roleidname: null,
         record2roleidname: null,
@@ -1782,10 +2104,34 @@ export class TwinCore {
         effectiveend: null,
         statecode: 0,
         statuscode: 1,
-      };
+      });
     }
-    throw new TypeError(`unsupported entity ${entity} for ${logicalId}`);
+    const generatedNumbers = {
+      leads: ["fullname", ""],
+      quotes: ["quotenumber", `QUO-R${sequence}`],
+      salesorders: ["ordernumber", `ORD-R${sequence}`],
+      invoices: ["invoicenumber", `INV-R${sequence}`],
+      msdyn_workorders: ["msdyn_name", `WO-R${sequence}`],
+    };
+    if (generatedNumbers[entity]) {
+      result[generatedNumbers[entity][0]] = generatedNumbers[entity][1];
+    }
+    if (entity === "quotes") result.revisionnumber = 1;
+    if (["quotedetails", "opportunityproducts", "salesorderdetails", "invoicedetails"].includes(entity)) {
+      result.lineitemnumber = 1;
+      if (definition.schema.fields.ispriceoverridden) result.ispriceoverridden = false;
+      if (definition.schema.fields.quantityshipped) result.quantityshipped = "0.00";
+      if (definition.schema.fields.quantitycancelled) result.quantitycancelled = "0.00";
+    }
+    if (entity === "bookableresourcebookings") result.duration = 1;
+    if (entity === "msdyn_workorderproducts") {
+      result.msdyn_lineorder = 1;
+      result.msdyn_totalamount = "0.00";
+    }
+    if (entity === "msdyn_workorderservices") result.msdyn_totalamount = "0.00";
+    return result;
   }
+
 
   _ensureEmailParties(record, synthesize = false) {
     const owner = this._identity(record.ownerid);
@@ -1820,9 +2166,472 @@ export class TwinCore {
     }
   }
 
+  _assertRecordWritable(entity, current, payload = {}, operation = "update") {
+    const definition = ENTITY_DEFINITIONS[entity];
+    if (!definition.mutable) throw new TypeError(`${entity} is read-only`);
+    if (
+      operation === "create" &&
+      ["msdyn_workorders", "bookableresourcebookings"].includes(entity)
+    ) {
+      throw new TypeError(
+        `${entity} creation requires its registered atomic action`,
+      );
+    }
+    if (CLOSED_HEADER_ENTITIES.has(entity) && current && current.statecode !== 0) {
+      throw new TypeError(`closed ${definition.logicalName} records are read-only`);
+    }
+    const lineContract = SALES_LINE_CONTRACTS[entity];
+    if (lineContract) {
+      const parentId =
+        current?.[lineContract.parentField] ?? payload[lineContract.parentField];
+      const parent = this._lookup(lineContract.parentEntity, parentId);
+      if (!parent) throw new TypeError(`${lineContract.parentField} does not resolve`);
+      if (parent.statecode !== 0) {
+        throw new TypeError(`lines of closed ${lineContract.parentEntity} are read-only`);
+      }
+      if (
+        current &&
+        payload[lineContract.parentField] !== undefined &&
+        payload[lineContract.parentField] !== current[lineContract.parentField]
+      ) {
+        throw new TypeError("sales lines cannot be moved to a different parent");
+      }
+    }
+    if (
+      ["leads", "opportunities", "quotes", "salesorders", "invoices"].includes(entity) &&
+      (payload.statecode !== undefined || payload.statuscode !== undefined)
+    ) {
+      throw new TypeError(`${entity} lifecycle changes require a registered action`);
+    }
+    if (
+      current &&
+      ["opportunities", "quotes", "salesorders", "invoices"].includes(entity) &&
+      (payload.transactioncurrencyid !== undefined ||
+        payload.pricelevelid !== undefined)
+    ) {
+      const contractEntry = Object.entries(SALES_LINE_CONTRACTS).find(
+        ([, contract]) => contract.parentEntity === entity,
+      );
+      if (contractEntry) {
+        const [lineEntity, contract] = contractEntry;
+        const hasLines = this._records(lineEntity).some(
+          (line) =>
+            line[contract.parentField] === current[definition.id],
+        );
+        const currencyChanged =
+          payload.transactioncurrencyid !== undefined &&
+          payload.transactioncurrencyid !== current.transactioncurrencyid;
+        const priceListChanged =
+          payload.pricelevelid !== undefined &&
+          payload.pricelevelid !== current.pricelevelid;
+        if (hasLines && (currencyChanged || priceListChanged)) {
+          throw new TypeError(
+            "document currency and price list cannot change while lines exist",
+          );
+        }
+      }
+    }
+    if (entity === "msdyn_workorders") {
+      if ([690970003, 690970004, 690970005].includes(current?.msdyn_systemstatus)) {
+        throw new TypeError("terminal work orders are read-only");
+      }
+      if (
+        payload.msdyn_systemstatus !== undefined ||
+        payload.statecode !== undefined ||
+        payload.statuscode !== undefined
+      ) {
+        throw new TypeError("work order lifecycle changes require a registered action");
+      }
+    }
+    if (
+      entity === "bookableresourcebookings" &&
+      current?.statecode === 1 &&
+      operation !== "action"
+    ) {
+      throw new TypeError("terminal bookings are read-only");
+    }
+    if (
+      entity === "bookableresourcebookings" &&
+      operation !== "action" &&
+      (payload.bookingstatus !== undefined ||
+        payload.statecode !== undefined ||
+        payload.statuscode !== undefined)
+    ) {
+      throw new TypeError("booking lifecycle changes require a registered action");
+    }
+    if (WORK_ORDER_CHILD_ENTITIES.has(entity) && operation !== "action") {
+      const parentId = current?.msdyn_workorder ?? payload.msdyn_workorder;
+      const parent = this._lookup("msdyn_workorders", parentId);
+      if (!parent) throw new TypeError("work order child parent does not resolve");
+      if (
+        current &&
+        payload.msdyn_workorder !== undefined &&
+        payload.msdyn_workorder !== current.msdyn_workorder
+      ) {
+        throw new TypeError("work order children cannot move to a different parent");
+      }
+      if (
+        parent.statecode !== 0 ||
+        TERMINAL_WORK_ORDER_STATUSES.has(parent.msdyn_systemstatus)
+      ) {
+        throw new TypeError("children of terminal work orders are read-only");
+      }
+    }
+  }
+
+  _prepareDerived(entity, record, payload = {}, current = null) {
+    if (
+      entity === "transactioncurrencies" &&
+      decimalUnits(record.exchangerate, 6) <= 0n
+    ) {
+      throw new TypeError("transaction currency exchange rate must be positive");
+    }
+    if (
+      entity !== "transactioncurrencies" &&
+      ENTITY_DEFINITIONS[entity].schema.fields.exchangerate
+    ) {
+      const currency = this._lookup(
+        "transactioncurrencies",
+        record.transactioncurrencyid,
+      );
+      if (!currency || decimalUnits(currency.exchangerate, 6) <= 0n) {
+        throw new TypeError("transaction currency must have a positive exchange rate");
+      }
+      record.exchangerate = currency.exchangerate;
+    }
+    if (entity === "products") {
+      const unit = this._lookup("uoms", record.defaultuomid);
+      if (!unit) throw new TypeError("product default UOM does not resolve");
+      if (
+        payload.defaultuomscheduleid !== undefined &&
+        payload.defaultuomscheduleid !== unit.uomscheduleid
+      ) {
+        throw new TypeError("product default UOM must belong to its unit group");
+      }
+      record.defaultuomscheduleid = unit.uomscheduleid;
+    }
+    const lineContract = SALES_LINE_CONTRACTS[entity];
+    if (lineContract) {
+      const parent = this._lookup(
+        lineContract.parentEntity,
+        record[lineContract.parentField],
+      );
+      if (!parent) throw new TypeError(`${lineContract.parentField} does not resolve`);
+      if (!current && payload.transactioncurrencyid === undefined) {
+        record.transactioncurrencyid = parent.transactioncurrencyid;
+        record.exchangerate = parent.exchangerate;
+      }
+      if (record.transactioncurrencyid !== parent.transactioncurrencyid) {
+        throw new TypeError("sales line currency must match its parent");
+      }
+      const priceList = this._lookup("pricelevels", parent.pricelevelid);
+      const currency = this._lookup(
+        "transactioncurrencies",
+        parent.transactioncurrencyid,
+      );
+      if (
+        !priceList ||
+        priceList.statecode !== 0 ||
+        !currency ||
+        currency.statecode !== 0 ||
+        priceList.transactioncurrencyid !== parent.transactioncurrencyid
+      ) {
+        throw new TypeError("sales line parent requires an active coherent price list");
+      }
+      if (decimalUnits(record.quantity, 2) <= 0n) {
+        throw new TypeError("line quantity must be greater than zero");
+      }
+      const shouldResolveCurrentPrice =
+        (!current && payload.priceperunit === undefined) ||
+        (entity === "opportunityproducts" && record.ispriceoverridden === false);
+      if (shouldResolveCurrentPrice) {
+        const price = this._records("productpricelevels").find(
+          (candidate) =>
+            candidate.productid === record.productid &&
+            candidate.pricelevelid === parent.pricelevelid &&
+            candidate.uomid === record.uomid &&
+            candidate.transactioncurrencyid === parent.transactioncurrencyid,
+        );
+        if (!price) throw new TypeError("no active product price exists for the parent price list");
+        record.priceperunit = price.amount;
+      }
+      const coherentPrice = this._records("productpricelevels").some(
+        (candidate) =>
+          candidate.productid === record.productid &&
+          candidate.pricelevelid === parent.pricelevelid &&
+          candidate.uomid === record.uomid &&
+          candidate.transactioncurrencyid === parent.transactioncurrencyid,
+      );
+      if (!coherentPrice) {
+        throw new TypeError("sales line has no coherent product price level");
+      }
+      record.baseamount = multiplyDecimal(record.quantity, 2, record.priceperunit, 2);
+      const extended =
+        decimalUnits(record.baseamount, 2) -
+        decimalUnits(record.manualdiscountamount, 2) +
+        decimalUnits(record.tax, 2);
+      if (
+        decimalUnits(record.manualdiscountamount, 2) < 0n ||
+        decimalUnits(record.tax, 2) < 0n ||
+        extended < 0n
+      ) {
+        throw new TypeError("line discounts, tax, and extended amount must be non-negative");
+      }
+      record.extendedamount = decimalText(extended, 2);
+      if (!current) {
+        const siblingNumbers = this._records(entity)
+          .filter(
+            (candidate) =>
+              candidate[lineContract.parentField] === record[lineContract.parentField],
+          )
+          .map((candidate) => candidate.lineitemnumber);
+        record.lineitemnumber = (siblingNumbers.length ? Math.max(...siblingNumbers) : 0) + 1;
+      }
+    }
+    if (["quotes", "salesorders", "invoices", "opportunities"].includes(entity)) {
+      const priceList = this._lookup("pricelevels", record.pricelevelid);
+      if (
+        !current &&
+        payload.transactioncurrencyid === undefined &&
+        priceList
+      ) {
+        record.transactioncurrencyid = priceList.transactioncurrencyid;
+        const currency = this._lookup(
+          "transactioncurrencies",
+          record.transactioncurrencyid,
+        );
+        record.exchangerate = currency?.exchangerate;
+      }
+      const currency = this._lookup(
+        "transactioncurrencies",
+        record.transactioncurrencyid,
+      );
+      if (
+        !priceList ||
+        priceList.statecode !== 0 ||
+        !currency ||
+        currency.statecode !== 0 ||
+        decimalUnits(currency.exchangerate, 6) <= 0n ||
+        priceList.transactioncurrencyid !== record.transactioncurrencyid
+      ) {
+        throw new TypeError("document requires an active coherent price list and currency");
+      }
+      const contractEntry = Object.entries(SALES_LINE_CONTRACTS).find(
+        ([, contract]) => contract.parentEntity === entity,
+      );
+      if (contractEntry && record[ENTITY_DEFINITIONS[entity].id]) {
+        const [lineEntity, contract] = contractEntry;
+        const lines = this._records(lineEntity).filter(
+          (line) =>
+            line[contract.parentField] ===
+            record[ENTITY_DEFINITIONS[entity].id],
+        );
+        let base = 0n;
+        let discount = 0n;
+        let tax = 0n;
+        for (const line of lines) {
+          base += decimalUnits(line.baseamount, 2);
+          discount += decimalUnits(line.manualdiscountamount, 2);
+          tax += decimalUnits(line.tax, 2);
+        }
+        const headerDiscount = record.discountamount
+          ? decimalUnits(record.discountamount, 2)
+          : 0n;
+        const freight = record.freightamount
+          ? decimalUnits(record.freightamount, 2)
+          : 0n;
+        record.totallineitemamount = decimalText(base, 2);
+        record.totaldiscountamount = decimalText(
+          discount + headerDiscount,
+          2,
+        );
+        record.totaltax = decimalText(tax, 2);
+        const total = base - discount - headerDiscount + tax + freight;
+        if (
+          minBigInt(base, discount, headerDiscount, tax, freight, total) < 0n
+        ) {
+          throw new TypeError("document money and derived totals must be non-negative");
+        }
+        record.totalamount = decimalText(total, 2);
+      }
+    }
+    if (entity === "productpricelevels") {
+      const priceList = this._lookup("pricelevels", record.pricelevelid);
+      const product = this._lookup("products", record.productid);
+      const unit = this._lookup("uoms", record.uomid);
+      if (
+        !priceList ||
+        priceList.transactioncurrencyid !== record.transactioncurrencyid ||
+        !product ||
+        !unit ||
+        unit.uomscheduleid !== product.defaultuomscheduleid
+      ) {
+        throw new TypeError("product price currency and UOM must match its catalog");
+      }
+    }
+    if (entity === "msdyn_workorderproducts") {
+      if (decimalUnits(record.msdyn_quantity, 2) <= 0n) {
+        throw new TypeError("work order product quantity must be positive");
+      }
+      record.msdyn_totalamount = multiplyDecimal(
+        record.msdyn_quantity,
+        2,
+        record.msdyn_unitamount,
+        2,
+      );
+      const product = this._lookup("products", record.msdyn_product);
+      const unit = this._lookup("uoms", record.msdyn_unit);
+      if (!product || !unit || unit.uomscheduleid !== product.defaultuomscheduleid) {
+        throw new TypeError("work order product unit is outside its product unit group");
+      }
+      if (!current) {
+        const lines = this._records(entity).filter(
+          (candidate) => candidate.msdyn_workorder === record.msdyn_workorder,
+        );
+        record.msdyn_lineorder =
+          (lines.length ? Math.max(...lines.map((line) => line.msdyn_lineorder)) : 0) + 1;
+      }
+    }
+    if (entity === "msdyn_workorderservices") {
+      record.msdyn_totalamount = record.msdyn_unitamount;
+    }
+    if (entity === "msdyn_resourcerequirements") {
+      const start = new Date(record.msdyn_fromdate).valueOf();
+      const end = new Date(record.msdyn_todate).valueOf();
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= end) {
+        throw new TypeError("resource requirement must have a positive UTC window");
+      }
+    }
+    if (entity === "bookableresourcebookings") {
+      const start = new Date(record.starttime).valueOf();
+      const end = new Date(record.endtime).valueOf();
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start >= end) {
+        throw new TypeError("booking must have a positive UTC interval");
+      }
+      const duration = (end - start) / 60000;
+      if (!Number.isSafeInteger(duration) || duration < 1) {
+        throw new TypeError("booking duration must be a whole number of minutes");
+      }
+      record.duration = duration;
+      const requirement = this._lookup(
+        "msdyn_resourcerequirements",
+        record.msdyn_resourcerequirement,
+      );
+      if (!requirement || requirement.msdyn_workorder !== record.msdyn_workorder) {
+        throw new TypeError("booking requirement must belong to its work order");
+      }
+      const requirementStart = new Date(requirement.msdyn_fromdate).valueOf();
+      const requirementEnd = new Date(requirement.msdyn_todate).valueOf();
+      if (start < requirementStart || end > requirementEnd) {
+        throw new TypeError("booking must be contained in its requirement window");
+      }
+      const resource = this._lookup("bookableresources", record.resource);
+      if (!resource || resource.statecode !== 0) {
+        throw new TypeError("booking requires an active resource");
+      }
+      if (record.statecode === 0 && requirement.statecode !== 0) {
+        throw new TypeError("active booking requires an active requirement");
+      }
+      const status = this._lookup("bookingstatuses", record.bookingstatus);
+      const canceled = status?.msdyn_fieldservicestatus === 690970004;
+      if (!canceled) {
+        for (const candidate of this._records("bookableresourcebookings")) {
+          if (
+            candidate.bookableresourcebookingid ===
+              current?.bookableresourcebookingid ||
+            candidate.resource !== record.resource
+          ) {
+            continue;
+          }
+          const candidateStatus = this._lookup(
+            "bookingstatuses",
+            candidate.bookingstatus,
+          );
+          if (candidateStatus?.msdyn_fieldservicestatus === 690970004) continue;
+          const candidateStart = new Date(candidate.starttime).valueOf();
+          const candidateEnd = new Date(candidate.endtime).valueOf();
+          if (start < candidateEnd && candidateStart < end) {
+            throw new TypeError("resource booking overlaps an existing half-open interval");
+          }
+        }
+      }
+    }
+    if (entity === "msdyn_workorders") {
+      const asset = this._lookup("msdyn_customerassets", record.msdyn_customerasset);
+      const incident = this._lookup("incidents", record.msdyn_servicerequest);
+      const caseAccount =
+        incident?.customeridtype === "accounts"
+          ? incident.customerid
+          : this._lookup("contacts", incident?.customerid)?.parentcustomerid;
+      if (
+        !asset ||
+        !incident ||
+        record.msdyn_serviceaccount !== asset.msdyn_account ||
+        record.msdyn_serviceaccount !== caseAccount
+      ) {
+        throw new TypeError("work order case, asset, and service account must agree");
+      }
+    }
+    return record;
+  }
+
+  _lineRollupChange(entity, nextLine, currentLine = null, deleting = false) {
+    const contract = SALES_LINE_CONTRACTS[entity];
+    if (!contract) return null;
+    const parentId = (nextLine || currentLine)[contract.parentField];
+    const parent = this._lookup(contract.parentEntity, parentId);
+    if (!parent) throw new TypeError("sales line parent does not resolve");
+    const lineId = currentLine?.[ENTITY_DEFINITIONS[entity].id];
+    const lines = this._records(entity)
+      .filter((line) => line[contract.parentField] === parentId)
+      .filter((line) => line[ENTITY_DEFINITIONS[entity].id] !== lineId);
+    if (!deleting && nextLine) lines.push(nextLine);
+    let base = 0n;
+    let discount = 0n;
+    let tax = 0n;
+    for (const line of lines) {
+      base += decimalUnits(line.baseamount, 2);
+      discount += decimalUnits(line.manualdiscountamount, 2);
+      tax += decimalUnits(line.tax, 2);
+    }
+    const headerDiscount = parent.discountamount
+      ? decimalUnits(parent.discountamount, 2)
+      : 0n;
+    const freight = parent.freightamount
+      ? decimalUnits(parent.freightamount, 2)
+      : 0n;
+    const updated = clone(parent);
+    updated.totallineitemamount = decimalText(base, 2);
+    updated.totaldiscountamount = decimalText(discount + headerDiscount, 2);
+    updated.totaltax = decimalText(tax, 2);
+    const total = base - discount - headerDiscount + tax + freight;
+    if (
+      minBigInt(base, discount, headerDiscount, tax, freight, total) < 0n
+    ) {
+      throw new TypeError("document money and derived totals must be non-negative");
+    }
+    updated.totalamount = decimalText(total, 2);
+    return {
+      entity: contract.parentEntity,
+      id: parentId,
+      record: updated,
+      kind: "line-rollup",
+      before: parent,
+    };
+  }
+
   _commitBatch(changes, logicalId) {
     let nextRevision = this.revisionCounter;
+    const seenChanges = new Set();
     const prepared = changes.map((change) => {
+      if (!ENTITY_DEFINITIONS[change.entity]) {
+        throw new TypeError(`unknown staged entity ${change.entity}`);
+      }
+      const changeKey = `${change.entity}\0${change.id}`;
+      if (seenChanges.has(changeKey)) {
+        throw new TypeError(`duplicate staged change for ${change.entity}(${change.id})`);
+      }
+      seenChanges.add(changeKey);
       nextRevision += 1;
       const record = change.record ? clone(change.record) : null;
       if (record) {
@@ -1840,6 +2649,34 @@ export class TwinCore {
       };
       return { ...change, record, revision: nextRevision, event };
     });
+    const previousEntities = this.entities;
+    const previousRevisions = this.revisions;
+    const previousReverseIndex = this.reverseIndex;
+    const projectedEntities = {};
+    const projectedRevisions = {};
+    for (const entity of Object.keys(ENTITY_DEFINITIONS)) {
+      projectedEntities[entity] = new Map(previousEntities[entity]);
+      projectedRevisions[entity] = new Map(previousRevisions[entity]);
+    }
+    for (const change of prepared) {
+      if (change.record) {
+        projectedEntities[change.entity].set(change.id, change.record);
+        projectedRevisions[change.entity].set(change.id, change.revision);
+      } else {
+        projectedEntities[change.entity].delete(change.id);
+        projectedRevisions[change.entity].delete(change.id);
+      }
+    }
+    this.entities = projectedEntities;
+    this.revisions = projectedRevisions;
+    try {
+      this._rebuildReverseIndex();
+      this.validateIntegrity();
+    } finally {
+      this.entities = previousEntities;
+      this.revisions = previousRevisions;
+      this.reverseIndex = previousReverseIndex;
+    }
     for (const change of prepared) {
       if (change.record) {
         this.entities[change.entity].set(change.id, change.record);
@@ -1850,6 +2687,7 @@ export class TwinCore {
       }
     }
     this.revisionCounter = nextRevision;
+    this._rebuildReverseIndex();
     for (const change of prepared) this._event("commit", change.event);
     return prepared;
   }
@@ -1862,147 +2700,39 @@ export class TwinCore {
   }
 
   _namePropagationChanges(entity, id, updated) {
-    if (!["accounts", "contacts"].includes(entity)) return [];
+    const primaryName = ENTITY_DEFINITIONS[entity].primaryName;
+    const name = updated[primaryName];
+    const references = this.reverseIndex.get(`${entity}\0${id}`) || [];
     const changes = [];
-    const stage = (targetEntity, record, mutate) => {
-      const next = clone(record);
-      mutate(next);
+    const staged = new Map();
+    for (const reference of references) {
+      if (reference.sourceEntity === entity && reference.sourceId === id) continue;
+      const key = `${reference.sourceEntity}\0${reference.sourceId}`;
+      const current = this._lookup(reference.sourceEntity, reference.sourceId);
+      if (!current) continue;
+      const next = staged.get(key)?.record || clone(current);
+      next[reference.displayField] = name;
+      next[`${reference.field}@OData.Community.Display.V1.FormattedValue`] = name;
+      if (reference.sourceEntity === "emails" && reference.field === "senderid") {
+        next.fromname = name;
+      }
+      if (reference.sourceEntity === "emails" && reference.field === "recipientid") {
+        next.toname = name;
+      }
+      staged.set(key, { reference, current, record: next });
+    }
+    for (const { reference, current, record } of staged.values()) {
       changes.push({
-        entity: targetEntity,
-        id: next[ENTITY_DEFINITIONS[targetEntity].id],
-        record: next,
+        entity: reference.sourceEntity,
+        id: reference.sourceId,
+        record,
         kind: "cascade-update",
-        before: record,
+        before: current,
       });
-    };
-    const formatted = (record, field, value) => {
-      record[`${field}@OData.Community.Display.V1.FormattedValue`] = value;
-    };
-    if (entity === "accounts") {
-      const name = updated.name;
-      for (const record of this._records("contacts")) {
-        if (record.parentcustomerid === id) {
-          stage("contacts", record, (next) => {
-            next.parentcustomeridname = name;
-            formatted(next, "parentcustomerid", name);
-          });
-        }
-      }
-      for (const record of this._records("incidents")) {
-        if (record.customeridtype === "accounts" && record.customerid === id) {
-          stage("incidents", record, (next) => {
-            next.customeridname = name;
-            formatted(next, "customerid", name);
-          });
-        }
-      }
-      for (const record of this._records("tasks")) {
-        if (record.regardingobjectidtype === "accounts" && record.regardingobjectid === id) {
-          stage("tasks", record, (next) => {
-            next.regardingobjectidname = name;
-            formatted(next, "regardingobjectid", name);
-          });
-        }
-      }
-      for (const record of this._records("emails")) {
-        const regarding = record.regardingobjectidtype === "accounts" && record.regardingobjectid === id;
-        const sender = record.senderidtype === "accounts" && record.senderid === id;
-        const recipient = record.recipientidtype === "accounts" && record.recipientid === id;
-        if (regarding || sender || recipient) {
-          stage("emails", record, (next) => {
-            if (regarding) {
-              next.regardingobjectidname = name;
-              formatted(next, "regardingobjectid", name);
-            }
-            if (sender) {
-              next.senderidname = name;
-              next.fromname = name;
-              formatted(next, "senderid", name);
-            }
-            if (recipient) {
-              next.recipientidname = name;
-              next.toname = name;
-              formatted(next, "recipientid", name);
-            }
-          });
-        }
-      }
-    } else {
-      const name = updated.fullname;
-      for (const record of this._records("accounts")) {
-        if (record.primarycontactid === id) {
-          stage("accounts", record, (next) => {
-            next.primarycontactidname = name;
-            formatted(next, "primarycontactid", name);
-          });
-        }
-      }
-      for (const record of this._records("incidents")) {
-        const primary = record.primarycontactid === id;
-        const customer = record.customeridtype === "contacts" && record.customerid === id;
-        if (primary || customer) {
-          stage("incidents", record, (next) => {
-            if (primary) {
-              next.primarycontactidname = name;
-              formatted(next, "primarycontactid", name);
-            }
-            if (customer) {
-              next.customeridname = name;
-              formatted(next, "customerid", name);
-            }
-          });
-        }
-      }
-      for (const record of this._records("tasks")) {
-        if (record.regardingobjectidtype === "contacts" && record.regardingobjectid === id) {
-          stage("tasks", record, (next) => {
-            next.regardingobjectidname = name;
-            formatted(next, "regardingobjectid", name);
-          });
-        }
-      }
-      for (const record of this._records("emails")) {
-        const regarding = record.regardingobjectidtype === "contacts" && record.regardingobjectid === id;
-        const sender = record.senderidtype === "contacts" && record.senderid === id;
-        const recipient = record.recipientidtype === "contacts" && record.recipientid === id;
-        if (regarding || sender || recipient) {
-          stage("emails", record, (next) => {
-            if (regarding) {
-              next.regardingobjectidname = name;
-              formatted(next, "regardingobjectid", name);
-            }
-            if (sender) {
-              next.senderidname = name;
-              next.fromname = name;
-              formatted(next, "senderid", name);
-            }
-            if (recipient) {
-              next.recipientidname = name;
-              next.toname = name;
-              formatted(next, "recipientid", name);
-            }
-          });
-        }
-      }
-      for (const record of this._records("connections")) {
-        const first = record.record1id === id;
-        const second = record.record2id === id;
-        if (first || second) {
-          stage("connections", record, (next) => {
-            if (first) {
-              next.record1idname = name;
-              formatted(next, "record1id", name);
-            }
-            if (second) {
-              next.record2idname = name;
-              formatted(next, "record2id", name);
-            }
-          });
-        }
-      }
     }
     return changes;
   }
+
 
   _ifMatch(record, headers) {
     const supplied = headers.get("if-match");
@@ -2018,56 +2748,15 @@ export class TwinCore {
   }
 
   _deleteGuard(entity, id) {
-    const references = new Set();
-    const add = (set, record, field, discriminator = null) => {
-      if (
-        record[field] === id &&
-        (!discriminator || record[discriminator] === entity)
-      ) {
-        references.add(`${set}(${record[ENTITY_DEFINITIONS[set].id]})`);
-      }
-    };
-    if (entity === "accounts") {
-      for (const record of this._records("contacts")) add("contacts", record, "parentcustomerid");
-      for (const record of this._records("incidents")) {
-        add("incidents", record, "customerid", "customeridtype");
-      }
-      for (const record of this._records("tasks")) {
-        add("tasks", record, "regardingobjectid", "regardingobjectidtype");
-      }
-      for (const record of this._records("emails")) {
-        add("emails", record, "regardingobjectid", "regardingobjectidtype");
-        add("emails", record, "senderid", "senderidtype");
-        add("emails", record, "recipientid", "recipientidtype");
-      }
-    } else if (entity === "contacts") {
-      for (const record of this._records("accounts")) add("accounts", record, "primarycontactid");
-      for (const record of this._records("incidents")) {
-        add("incidents", record, "customerid", "customeridtype");
-        add("incidents", record, "primarycontactid");
-      }
-      for (const record of this._records("tasks")) {
-        add("tasks", record, "regardingobjectid", "regardingobjectidtype");
-      }
-      for (const record of this._records("emails")) {
-        add("emails", record, "regardingobjectid", "regardingobjectidtype");
-        add("emails", record, "senderid", "senderidtype");
-        add("emails", record, "recipientid", "recipientidtype");
-      }
-      for (const record of this._records("connections")) {
-        add("connections", record, "record1id", "record1type");
-        add("connections", record, "record2id", "record2type");
-      }
-    } else if (entity === "incidents") {
-      for (const record of this._records("tasks")) {
-        add("tasks", record, "regardingobjectid", "regardingobjectidtype");
-      }
-      for (const record of this._records("emails")) {
-        add("emails", record, "regardingobjectid", "regardingobjectidtype");
-      }
-    }
-    return [...references].sort(codeUnitCompare);
+    return (this.reverseIndex.get(`${entity}\0${id}`) || [])
+      .filter((reference) => reference.onDelete === "restrict")
+      .map(
+        (reference) =>
+          `${reference.sourceEntity}(${reference.sourceId}).${reference.field}`,
+      )
+      .sort(codeUnitCompare);
   }
+
 
   _handleDeleteMany(route, init, logicalId) {
     if (!["accounts", "contacts"].includes(route.entity)) {
@@ -2149,11 +2838,14 @@ export class TwinCore {
   }
 
   _metadata() {
-    const metadata = clone(this.initialSeed.metadata);
-    for (const entitySet of metadata.entitySets) {
-      entitySet.count = this.entities[entitySet.name].size;
-    }
-    return metadata;
+    return authoritativeMetadata(
+      Object.fromEntries(
+        Object.keys(ENTITY_DEFINITIONS).map((entity) => [
+          entity,
+          this._records(entity),
+        ]),
+      ),
+    );
   }
 
   _whoAmI() {
@@ -2204,6 +2896,1197 @@ export class TwinCore {
     }
   }
 
+  _actionTargetId(route, payload, names) {
+    if (route.id) {
+      for (const name of names) {
+        if (
+          payload[name] !== undefined &&
+          normalizedRecordId(payload[name]) !== route.id
+        ) {
+          throw new TypeError(
+            `${route.action} payload target differs from its binding`,
+          );
+        }
+      }
+      return route.id;
+    }
+    for (const name of names) {
+      if (payload[name] !== undefined && payload[name] !== null) {
+        return normalizedRecordId(payload[name]);
+      }
+    }
+    throw new TypeError(`${route.action} requires ${names[0]}`);
+  }
+
+  _actionCurrent(route, payload, entity, names, headers) {
+    const id = this._actionTargetId(route, payload, names);
+    if (route.id && route.entity !== entity) {
+      throw new TypeError(`${route.action} cannot be bound to ${route.entity}`);
+    }
+    const record = this._lookup(entity, id);
+    if (!record) throw new TypeError(`${entity}(${id}) was not found`);
+    const precondition = this._ifMatch(record, headers);
+    return { id, record, precondition };
+  }
+
+  _newActionRecord(entity, logicalId, suffix, values = {}) {
+    const id = deterministicGuid(
+      `${this.seedDigest}/${logicalId}/${entity}/${suffix}`,
+    );
+    if (this._lookup(entity, id)) {
+      throw new TypeError(`deterministic ${entity} action id already exists`);
+    }
+    const record = {
+      ...this._defaults(entity, `${logicalId}-${suffix}`, values, true),
+      ...values,
+      [ENTITY_DEFINITIONS[entity].id]: id,
+    };
+    return record;
+  }
+
+  _decorateStagedChanges(changes) {
+    const staged = new Map();
+    for (const change of changes) {
+      if (change.record) {
+        if (change.entity === "contacts" || change.entity === "leads") {
+          change.record.fullname =
+            `${change.record.firstname} ${change.record.lastname}`.trim();
+        }
+        staged.set(`${change.entity}\0${change.id}`, change.record);
+      }
+    }
+    const resolve = (entity, id) => {
+      const record = staged.get(`${entity}\0${id}`) || this._lookup(entity, id);
+      if (!record) throw new TypeError(`${entity} lookup ${id} does not resolve`);
+      return record;
+    };
+    for (const change of changes) {
+      const record = change.record;
+      if (!record) continue;
+      const definition = ENTITY_DEFINITIONS[change.entity];
+      if (change.entity === "contacts" || change.entity === "leads") {
+        record.fullname = `${record.firstname} ${record.lastname}`.trim();
+      }
+      for (const [field, fieldSchema] of Object.entries(definition.schema.fields)) {
+        const lookup = fieldSchema.lookup;
+        if (lookup) {
+          const annotation = `${field}@OData.Community.Display.V1.FormattedValue`;
+          if (record[field] === null || record[field] === undefined) {
+            record[lookup.displayField] = null;
+            delete record[annotation];
+          } else {
+            const target = lookup.discriminator
+              ? record[lookup.discriminator]
+              : lookup.targets[0];
+            if (!lookup.targets.includes(target)) {
+              throw new TypeError(`${change.entity}.${field} discriminator is invalid`);
+            }
+            const targetRecord = resolve(target, record[field]);
+            const name = targetRecord[ENTITY_DEFINITIONS[target].primaryName];
+            record[lookup.displayField] = name;
+            record[annotation] = name;
+          }
+        }
+        if (
+          fieldSchema.options &&
+          fieldSchema.formatted &&
+          record[field] !== null &&
+          record[field] !== undefined
+        ) {
+          const option = fieldSchema.options.find((item) => item.value === record[field]);
+          if (!option) throw new TypeError(`${change.entity}.${field} option is invalid`);
+          record[`${field}@OData.Community.Display.V1.FormattedValue`] = option.label;
+        }
+      }
+      if (definition.schema.fields.exchangerate) {
+        const currency = resolve(
+          "transactioncurrencies",
+          record.transactioncurrencyid,
+        );
+        if (decimalUnits(currency.exchangerate, 6) <= 0n) {
+          throw new TypeError("transaction currency exchange rate must be positive");
+        }
+        record.exchangerate = currency.exchangerate;
+      }
+      if (change.entity === "emails") {
+        record.fromname = record.senderidname;
+        record.toname = record.recipientidname;
+      }
+      for (const [field, type] of Object.entries(definition.fields)) {
+        if (record[field] === undefined) {
+          if (!type.endsWith("?")) {
+            throw new TypeError(`${change.entity}.${field} is required`);
+          }
+          record[field] = null;
+        }
+        validateFieldType(field, type, record[field], definition.schema.fields[field]);
+        validateFieldConstraints(change.entity, field, record[field]);
+      }
+      validateRequiredFields(change.entity, record);
+    }
+  }
+
+  _applyDocumentTotals(parent, lines) {
+    let base = 0n;
+    let discount = 0n;
+    let tax = 0n;
+    for (const line of lines) {
+      base += decimalUnits(line.baseamount, 2);
+      discount += decimalUnits(line.manualdiscountamount, 2);
+      tax += decimalUnits(line.tax, 2);
+    }
+    const headerDiscount = parent.discountamount
+      ? decimalUnits(parent.discountamount, 2)
+      : 0n;
+    const freight = parent.freightamount
+      ? decimalUnits(parent.freightamount, 2)
+      : 0n;
+    parent.totallineitemamount = decimalText(base, 2);
+    parent.totaldiscountamount = decimalText(discount + headerDiscount, 2);
+    parent.totaltax = decimalText(tax, 2);
+    const total = base - discount - headerDiscount + tax + freight;
+    if (
+      minBigInt(base, discount, headerDiscount, tax, freight, total) < 0n
+    ) {
+      throw new TypeError("document money and derived totals must be non-negative");
+    }
+    parent.totalamount = decimalText(total, 2);
+  }
+
+  _actionChangesResponse(action, changes, logicalId, extra = {}) {
+    this._decorateStagedChanges(changes);
+    const committed = this._commitBatch(changes, logicalId);
+    this.creationCounter += changes.filter((change) => change.kind.startsWith("action-create")).length;
+    return responseJson(
+      {
+        action,
+        primary: committed[0]?.record ? clone(committed[0].record) : null,
+        created: committed
+          .filter((change) => change.kind.startsWith("action-create"))
+          .map((change) => ({ entity: change.entity, id: change.id })),
+        ...extra,
+      },
+      200,
+    );
+  }
+
+  _actionUpdate(entity, current, values, kind = "action-update") {
+    const record = { ...clone(current), ...values, modifiedon: this.clock.now() };
+    return {
+      entity,
+      id: current[ENTITY_DEFINITIONS[entity].id],
+      record,
+      kind,
+      before: current,
+    };
+  }
+
+  _actionCreate(entity, record, kind = "action-create") {
+    return {
+      entity,
+      id: record[ENTITY_DEFINITIONS[entity].id],
+      record,
+      kind,
+      before: null,
+    };
+  }
+
+  _copyLine(source, entity, logicalId, suffix, parentField, parentId) {
+    const shared = {
+      [parentField]: parentId,
+      productid: source.productid,
+      uomid: source.uomid,
+      quantity: source.quantity,
+      priceperunit: source.priceperunit,
+      baseamount: source.baseamount,
+      manualdiscountamount: source.manualdiscountamount,
+      tax: source.tax,
+      extendedamount: source.extendedamount,
+      lineitemnumber: source.lineitemnumber,
+      description: source.description,
+      transactioncurrencyid: source.transactioncurrencyid,
+    };
+    if (entity === "quotedetails") {
+      shared.ispriceoverridden = source.ispriceoverridden;
+    }
+    if (entity === "salesorderdetails") {
+      shared.quotedetailid = source.quotedetailid || null;
+      shared.quantityshipped = "0.00";
+      shared.quantitycancelled = "0.00";
+    }
+    if (entity === "invoicedetails") {
+      shared.salesorderdetailid = source.salesorderdetailid || null;
+    }
+    return this._newActionRecord(entity, logicalId, suffix, shared);
+  }
+
+  _bookingStatus(fieldServiceStatus) {
+    const record = this._records("bookingstatuses").find(
+      (candidate) => candidate.msdyn_fieldservicestatus === fieldServiceStatus,
+    );
+    if (!record) throw new TypeError(`booking status ${fieldServiceStatus} is unavailable`);
+    return record;
+  }
+
+  _handleAction(route, init, headers, logicalId) {
+    if ([...route.query.keys()].length) {
+      return errorResponse(400, "0x80060888", "Actions do not accept query options.");
+    }
+    let payload;
+    try {
+      payload = validateActionPayload(route, parseBody(init.body));
+      const now = this.clock.now();
+      const action = route.action;
+
+      if (action === "CloseIncident") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "incidents",
+          ["IncidentId", "incidentid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 0) throw new TypeError("only active cases can be resolved");
+        const status = payload.Status ?? payload.status ?? 5;
+        if (![5, 1000].includes(status)) throw new TypeError("CloseIncident status must resolve the case");
+        const incident = this._actionUpdate("incidents", target.record, {
+          statecode: 1,
+          statuscode: status,
+          resolvedon: now,
+        });
+        const resolution = this._newActionRecord(
+          "incidentresolutions",
+          logicalId,
+          "resolution",
+          {
+            subject: payload.Subject || `Resolution for ${target.record.ticketnumber}`,
+            incidentid: target.id,
+            description: payload.Description ?? null,
+            actualdurationminutes: payload.ActualDurationMinutes ?? 30,
+            actualend: now,
+            statecode: 1,
+            statuscode: 2,
+          },
+        );
+        return this._actionChangesResponse(
+          action,
+          [incident, this._actionCreate("incidentresolutions", resolution)],
+          logicalId,
+        );
+      }
+
+      if (action === "QualifyLead") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "leads",
+          ["LeadId", "leadid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        const lead = target.record;
+        if (lead.statecode !== 0) throw new TypeError("only open leads can be qualified");
+        const changes = [];
+        let account = lead.parentaccountid
+          ? this._lookup("accounts", lead.parentaccountid)
+          : null;
+        if (payload.CreateAccount === true) {
+          account = this._newActionRecord("accounts", logicalId, "account", {
+            name: payload.AccountName || lead.companyname,
+            description: "Created atomically by QualifyLead simulator policy.",
+          });
+          changes.push(this._actionCreate("accounts", account));
+        }
+        let contact = lead.parentcontactid
+          ? this._lookup("contacts", lead.parentcontactid)
+          : null;
+        if (payload.CreateContact === true) {
+          if (!account) throw new TypeError("QualifyLead contact creation requires an account");
+          contact = this._newActionRecord("contacts", logicalId, "contact", {
+            firstname: lead.firstname,
+            lastname: lead.lastname,
+            emailaddress1: lead.emailaddress1,
+            telephone1: lead.telephone1,
+            parentcustomerid: account.accountid,
+          });
+          changes.push(this._actionCreate("contacts", contact));
+        }
+        let opportunity = null;
+        if (payload.CreateOpportunity !== false) {
+          if (!account && !contact) {
+            throw new TypeError("QualifyLead opportunity creation requires a customer");
+          }
+          const priceList = payload.PriceLevelId
+            ? this._lookup("pricelevels", normalizedRecordId(payload.PriceLevelId))
+            : this._records("pricelevels").find(
+                (candidate) => candidate.statecode === 0 && candidate.transactioncurrencyid === lead.transactioncurrencyid,
+              );
+          const currency = this._lookup(
+            "transactioncurrencies",
+            lead.transactioncurrencyid,
+          );
+          if (
+            !priceList ||
+            priceList.statecode !== 0 ||
+            priceList.transactioncurrencyid !== lead.transactioncurrencyid ||
+            !currency ||
+            currency.statecode !== 0
+          ) {
+            throw new TypeError(
+              "QualifyLead requires an active matching price list and currency",
+            );
+          }
+          const customer = account || contact;
+          const customerEntity = account ? "accounts" : "contacts";
+          opportunity = this._newActionRecord("opportunities", logicalId, "opportunity", {
+            name: payload.OpportunityName || lead.subject,
+            description: lead.description,
+            customerid: customer[ENTITY_DEFINITIONS[customerEntity].id],
+            customeridtype: customerEntity,
+            parentaccountid: account?.accountid ?? contact?.parentcustomerid ?? null,
+            parentcontactid: contact?.contactid ?? null,
+            originatingleadid: lead.leadid,
+            pricelevelid: priceList.pricelevelid,
+            transactioncurrencyid: lead.transactioncurrencyid,
+            estimatedvalue: lead.estimatedamount || "0.00",
+            actualvalue: null,
+            estimatedclosedate:
+              lead.estimatedclosedate || new Date(this.clock.valueOf() + 30 * 86400000).toISOString(),
+            actualclosedate: null,
+            closeprobability: 25,
+            salesstagecode: 1,
+            stepname: "Qualify",
+            statecode: 0,
+            statuscode: 1,
+          });
+          changes.push(this._actionCreate("opportunities", opportunity));
+        }
+        const leadChange = this._actionUpdate("leads", lead, {
+          statecode: 1,
+          statuscode: 3,
+          parentaccountid: account?.accountid ?? lead.parentaccountid,
+          parentcontactid: contact?.contactid ?? lead.parentcontactid,
+          qualifyingopportunityid: opportunity?.opportunityid ?? null,
+        });
+        changes.unshift(leadChange);
+        return this._actionChangesResponse(action, changes, logicalId);
+      }
+
+      if (["DisqualifyLead", "ReopenLead"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "leads",
+          ["LeadId", "leadid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (action === "DisqualifyLead") {
+          if (target.record.statecode !== 0) throw new TypeError("only open leads can be disqualified");
+          const status = payload.Status ?? 4;
+          if (![4, 5, 6, 7].includes(status)) throw new TypeError("invalid disqualification status");
+          return this._actionChangesResponse(
+            action,
+            [this._actionUpdate("leads", target.record, { statecode: 2, statuscode: status })],
+            logicalId,
+          );
+        }
+        if (target.record.statecode === 0) throw new TypeError("lead is already open");
+        return this._actionChangesResponse(
+          action,
+          [this._actionUpdate("leads", target.record, { statecode: 0, statuscode: 1 })],
+          logicalId,
+        );
+      }
+
+      if (["WinOpportunity", "LoseOpportunity"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "opportunities",
+          ["OpportunityId", "opportunityid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 0) throw new TypeError("only open opportunities can be closed");
+        const won = action === "WinOpportunity";
+        const status = won ? 3 : payload.Status ?? 4;
+        if (!won && ![4, 5].includes(status)) throw new TypeError("invalid lost opportunity status");
+        const revenue = won
+          ? payload.ActualRevenue ?? target.record.totalamount ?? target.record.estimatedvalue
+          : "0.00";
+        validateFieldType("ActualRevenue", "decimal", revenue, { scale: 2 });
+        const opportunity = this._actionUpdate("opportunities", target.record, {
+          statecode: won ? 1 : 2,
+          statuscode: status,
+          actualvalue: revenue,
+          actualclosedate: now,
+          closeprobability: won ? 100 : 0,
+          salesstagecode: 4,
+          stepname: "Close",
+        });
+        const close = this._newActionRecord("opportunitycloses", logicalId, "close", {
+          subject: `${won ? "Won" : "Lost"}: ${target.record.name}`,
+          opportunityid: target.id,
+          actualrevenue: revenue,
+          competitoridname: payload.CompetitorName ?? null,
+          description: payload.Description ?? null,
+          actualend: now,
+          statecode: 1,
+          statuscode: 2,
+        });
+        return this._actionChangesResponse(
+          action,
+          [opportunity, this._actionCreate("opportunitycloses", close)],
+          logicalId,
+        );
+      }
+
+      if (action === "ReopenOpportunity") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "opportunities",
+          ["OpportunityId", "opportunityid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode === 0) throw new TypeError("opportunity is already open");
+        return this._actionChangesResponse(
+          action,
+          [
+            this._actionUpdate("opportunities", target.record, {
+              statecode: 0,
+              statuscode: 1,
+              actualvalue: null,
+              actualclosedate: null,
+              closeprobability: 50,
+              salesstagecode: 3,
+              stepname: "Propose",
+            }),
+          ],
+          logicalId,
+        );
+      }
+
+      if (action === "GenerateQuote") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "opportunities",
+          ["OpportunityId", "opportunityid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 0) throw new TypeError("quotes require an open opportunity");
+        const opportunity = target.record;
+        const quote = this._newActionRecord("quotes", logicalId, "quote", {
+          name: payload.Name || `Proposal for ${opportunity.customeridname}`,
+          customerid: opportunity.customerid,
+          customeridtype: opportunity.customeridtype,
+          pricelevelid: opportunity.pricelevelid,
+          transactioncurrencyid: opportunity.transactioncurrencyid,
+          description: payload.Description ?? opportunity.description,
+          freightamount: payload.FreightAmount ?? "0.00",
+          discountamount: payload.DiscountAmount ?? "0.00",
+          opportunityid: opportunity.opportunityid,
+          revisionnumber: 1,
+          effectivefrom: now,
+          effectiveto: new Date(this.clock.valueOf() + 30 * 86400000).toISOString(),
+          statecode: 0,
+          statuscode: 1,
+        });
+        const sourceLines = this._records("opportunityproducts").filter(
+          (line) => line.opportunityid === opportunity.opportunityid,
+        );
+        const lines = sourceLines.map((line, index) =>
+          this._copyLine(
+            line,
+            "quotedetails",
+            logicalId,
+            `quote-line-${index}`,
+            "quoteid",
+            quote.quoteid,
+          ),
+        );
+        this._applyDocumentTotals(quote, lines);
+        const changes = [
+          this._actionCreate("quotes", quote),
+          ...lines.map((line) => this._actionCreate("quotedetails", line)),
+        ];
+        return this._actionChangesResponse(action, changes, logicalId);
+      }
+
+      if (["ActivateQuote", "WinQuote", "CloseQuote"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "quotes",
+          ["QuoteId", "quoteid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        let values;
+        if (action === "ActivateQuote") {
+          if (target.record.statecode !== 0) throw new TypeError("only draft quotes can be activated");
+          if (!this._records("quotedetails").some((line) => line.quoteid === target.id)) {
+            throw new TypeError("quote activation requires at least one line");
+          }
+          values = { statecode: 1, statuscode: 2 };
+        } else if (action === "WinQuote") {
+          if (target.record.statecode !== 1) throw new TypeError("only active quotes can be won");
+          values = { statecode: 2, statuscode: 3 };
+        } else {
+          if (![0, 1].includes(target.record.statecode)) throw new TypeError("quote is already closed");
+          const status = payload.Status ?? 5;
+          if (![4, 5].includes(status)) throw new TypeError("invalid quote close status");
+          values = { statecode: 3, statuscode: status };
+        }
+        return this._actionChangesResponse(
+          action,
+          [this._actionUpdate("quotes", target.record, values)],
+          logicalId,
+        );
+      }
+
+      if (action === "ReviseQuote") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "quotes",
+          ["QuoteId", "quoteid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 1) throw new TypeError("only active quotes can be revised");
+        const original = this._actionUpdate("quotes", target.record, {
+          statecode: 3,
+          statuscode: 6,
+        });
+        const revised = this._newActionRecord("quotes", logicalId, "revision", {
+          ...Object.fromEntries(
+            [
+              "name", "customerid", "customeridtype", "pricelevelid",
+              "transactioncurrencyid", "description", "freightamount",
+              "discountamount", "opportunityid", "effectivefrom", "effectiveto",
+            ].map((field) => [field, target.record[field]]),
+          ),
+          revisionnumber: target.record.revisionnumber + 1,
+          statecode: 0,
+          statuscode: 1,
+        });
+        const sourceLines = this._records("quotedetails").filter(
+          (line) => line.quoteid === target.id,
+        );
+        const lines = sourceLines.map((line, index) =>
+          this._copyLine(
+            line,
+            "quotedetails",
+            logicalId,
+            `revision-line-${index}`,
+            "quoteid",
+            revised.quoteid,
+          ),
+        );
+        this._applyDocumentTotals(revised, lines);
+        return this._actionChangesResponse(
+          action,
+          [
+            original,
+            this._actionCreate("quotes", revised),
+            ...lines.map((line) => this._actionCreate("quotedetails", line)),
+          ],
+          logicalId,
+        );
+      }
+
+      if (action === "ConvertQuoteToSalesOrder") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "quotes",
+          ["QuoteId", "quoteid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (![1, 2].includes(target.record.statecode)) {
+          throw new TypeError("only active or won quotes can become orders");
+        }
+        if (this._records("salesorders").some((order) => order.quoteid === target.id)) {
+          throw new TypeError("quote already has an order");
+        }
+        const quote = target.record;
+        const order = this._newActionRecord("salesorders", logicalId, "order", {
+          name: payload.Name || `Order for ${quote.customeridname}`,
+          customerid: quote.customerid,
+          customeridtype: quote.customeridtype,
+          pricelevelid: quote.pricelevelid,
+          transactioncurrencyid: quote.transactioncurrencyid,
+          description: quote.description,
+          freightamount: quote.freightamount,
+          discountamount: quote.discountamount,
+          quoteid: quote.quoteid,
+          opportunityid: quote.opportunityid,
+          datefulfilled: null,
+          requestdeliveryby: payload.RequestDeliveryBy
+            ? normalizeUtc(payload.RequestDeliveryBy, "RequestDeliveryBy")
+            : new Date(this.clock.valueOf() + 14 * 86400000).toISOString(),
+          statecode: 0,
+          statuscode: 1,
+        });
+        const sourceLines = this._records("quotedetails").filter(
+          (line) => line.quoteid === quote.quoteid,
+        );
+        if (!sourceLines.length) throw new TypeError("quote conversion requires lines");
+        const lines = sourceLines.map((line, index) => {
+          const copied = this._copyLine(
+            line,
+            "salesorderdetails",
+            logicalId,
+            `order-line-${index}`,
+            "salesorderid",
+            order.salesorderid,
+          );
+          copied.quotedetailid = line.quotedetailid;
+          return copied;
+        });
+        this._applyDocumentTotals(order, lines);
+        return this._actionChangesResponse(
+          action,
+          [
+            this._actionCreate("salesorders", order),
+            ...lines.map((line) => this._actionCreate("salesorderdetails", line)),
+            this._actionUpdate("quotes", quote, { statecode: 2, statuscode: 3 }),
+          ],
+          logicalId,
+        );
+      }
+
+      if (["CancelSalesOrder", "FulfillSalesOrder"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "salesorders",
+          ["SalesOrderId", "salesorderid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (![0, 1].includes(target.record.statecode)) throw new TypeError("order is terminal");
+        const fulfill = action === "FulfillSalesOrder";
+        const changes = [
+          this._actionUpdate("salesorders", target.record, {
+            statecode: fulfill ? 3 : 2,
+            statuscode: fulfill ? 6 : 5,
+            datefulfilled: fulfill ? now : null,
+          }),
+        ];
+        for (const line of this._records("salesorderdetails").filter(
+          (item) => item.salesorderid === target.id,
+        )) {
+          changes.push(
+            this._actionUpdate("salesorderdetails", line, {
+              quantityshipped: fulfill ? line.quantity : "0.00",
+              quantitycancelled: fulfill ? "0.00" : line.quantity,
+            }),
+          );
+        }
+        return this._actionChangesResponse(action, changes, logicalId);
+      }
+
+      if (action === "ConvertSalesOrderToInvoice") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "salesorders",
+          ["SalesOrderId", "salesorderid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 3) throw new TypeError("only fulfilled orders can be invoiced");
+        if (this._records("invoices").some((invoice) => invoice.salesorderid === target.id)) {
+          throw new TypeError("order already has an invoice");
+        }
+        const order = target.record;
+        const invoice = this._newActionRecord("invoices", logicalId, "invoice", {
+          name: payload.Name || `Invoice for ${order.customeridname}`,
+          customerid: order.customerid,
+          customeridtype: order.customeridtype,
+          pricelevelid: order.pricelevelid,
+          transactioncurrencyid: order.transactioncurrencyid,
+          description: order.description,
+          freightamount: order.freightamount,
+          discountamount: order.discountamount,
+          salesorderid: order.salesorderid,
+          opportunityid: order.opportunityid,
+          datedelivered: order.datefulfilled,
+          duedate: payload.DueDate
+            ? normalizeUtc(payload.DueDate, "DueDate")
+            : new Date(this.clock.valueOf() + 30 * 86400000).toISOString(),
+          statecode: 0,
+          statuscode: 1,
+        });
+        const sourceLines = this._records("salesorderdetails").filter(
+          (line) => line.salesorderid === order.salesorderid,
+        );
+        const lines = sourceLines.map((line, index) => {
+          const copied = this._copyLine(
+            line,
+            "invoicedetails",
+            logicalId,
+            `invoice-line-${index}`,
+            "invoiceid",
+            invoice.invoiceid,
+          );
+          copied.salesorderdetailid = line.salesorderdetailid;
+          return copied;
+        });
+        this._applyDocumentTotals(invoice, lines);
+        return this._actionChangesResponse(
+          action,
+          [
+            this._actionCreate("invoices", invoice),
+            ...lines.map((line) => this._actionCreate("invoicedetails", line)),
+          ],
+          logicalId,
+        );
+      }
+
+      if (["MarkInvoicePaid", "CancelInvoice"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "invoices",
+          ["InvoiceId", "invoiceid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 0) throw new TypeError("invoice is terminal");
+        const paid = action === "MarkInvoicePaid";
+        return this._actionChangesResponse(
+          action,
+          [
+            this._actionUpdate("invoices", target.record, {
+              statecode: paid ? 1 : 2,
+              statuscode: paid ? 5 : 4,
+            }),
+          ],
+          logicalId,
+        );
+      }
+
+      if (action === "CreateWorkOrder") {
+        const incidentId = this._actionTargetId(
+          route,
+          payload,
+          ["CaseId", "incidentid"],
+        );
+        const incident = this._lookup("incidents", incidentId);
+        if (!incident) throw new TypeError("CreateWorkOrder case was not found");
+        const accountId = payload.AccountId
+          ? normalizedRecordId(payload.AccountId)
+          : incident.customeridtype === "accounts"
+            ? incident.customerid
+            : this._lookup("contacts", incident.customerid)?.parentcustomerid;
+        const assetId = payload.CustomerAssetId
+          ? normalizedRecordId(payload.CustomerAssetId)
+          : this._records("msdyn_customerassets").find(
+              (candidate) => candidate.msdyn_account === accountId,
+            )?.msdyn_customerassetid;
+        const asset = this._lookup("msdyn_customerassets", assetId);
+        if (!asset || asset.msdyn_account !== accountId) {
+          throw new TypeError("CreateWorkOrder asset and account must match the case");
+        }
+        const account = this._lookup("accounts", accountId);
+        const workOrderType = payload.WorkOrderTypeId
+          ? this._lookup("msdyn_workordertypes", normalizedRecordId(payload.WorkOrderTypeId))
+          : this._records("msdyn_workordertypes")[0];
+        const incidentType = payload.IncidentTypeId
+          ? this._lookup("msdyn_incidenttypes", normalizedRecordId(payload.IncidentTypeId))
+          : this._records("msdyn_incidenttypes")[0];
+        const priority = payload.PriorityId
+          ? this._lookup("msdyn_priorities", normalizedRecordId(payload.PriorityId))
+          : this._records("msdyn_priorities")[1];
+        if (!account || !workOrderType || !incidentType || !priority) {
+          throw new TypeError("CreateWorkOrder reference data is incomplete");
+        }
+        const windowStart = payload.WindowStart
+          ? normalizeUtc(payload.WindowStart, "WindowStart")
+          : now;
+        const windowStartMilliseconds = new Date(windowStart).valueOf();
+        const windowEnd = payload.WindowEnd
+          ? normalizeUtc(payload.WindowEnd, "WindowEnd")
+          : new Date(windowStartMilliseconds + 4 * 3600000).toISOString();
+        if (new Date(windowEnd).valueOf() <= windowStartMilliseconds) {
+          throw new TypeError("CreateWorkOrder window end must be after its start");
+        }
+        const workorder = this._newActionRecord("msdyn_workorders", logicalId, "workorder", {
+          msdyn_serviceaccount: accountId,
+          msdyn_billingaccount: accountId,
+          msdyn_reportedbycontact: incident.primarycontactid,
+          msdyn_servicerequest: incidentId,
+          msdyn_customerasset: assetId,
+          msdyn_workordertype: workOrderType.msdyn_workordertypeid,
+          msdyn_primaryincidenttype: incidentType.msdyn_incidenttypeid,
+          msdyn_priority: priority.msdyn_priorityid,
+          msdyn_systemstatus: 690970000,
+          msdyn_address1: account.address1_line1,
+          msdyn_city: account.address1_city,
+          msdyn_stateorprovince: account.address1_stateorprovince,
+          msdyn_postalcode: account.address1_postalcode,
+          msdyn_country: account.address1_country,
+          msdyn_instructions: payload.Instructions ?? null,
+          msdyn_datewindowstart: windowStart,
+          msdyn_datewindowend: windowEnd,
+          msdyn_timefrompromised: windowStart,
+          msdyn_timetopromised: windowEnd,
+          msdyn_firstarrivedon: null,
+          msdyn_completedon: null,
+          statecode: 0,
+          statuscode: 1,
+        });
+        this._prepareDerived("msdyn_workorders", workorder, payload, null);
+        const requirement = this._newActionRecord(
+          "msdyn_resourcerequirements",
+          logicalId,
+          "requirement",
+          {
+            msdyn_name: `Primary requirement for ${workorder.msdyn_name}`,
+            msdyn_workorder: workorder.msdyn_workorderid,
+            msdyn_fromdate: windowStart,
+            msdyn_todate: windowEnd,
+            msdyn_duration: incidentType.msdyn_estimatedduration,
+            msdyn_isprimary: true,
+            statecode: 0,
+            statuscode: 1,
+          },
+        );
+        const workorderIncident = this._newActionRecord(
+          "msdyn_workorderincidents",
+          logicalId,
+          "workorder-incident",
+          {
+            msdyn_name: `${workorder.msdyn_name} incident`,
+            msdyn_workorder: workorder.msdyn_workorderid,
+            msdyn_incidenttype: incidentType.msdyn_incidenttypeid,
+            msdyn_customerasset: assetId,
+            msdyn_estimatedduration: incidentType.msdyn_estimatedduration,
+          },
+        );
+        const taskTypes = this._records("msdyn_servicetasktypes").slice(0, 3);
+        const tasks = taskTypes.map((taskType, index) =>
+          this._newActionRecord(
+            "msdyn_workorderservicetasks",
+            logicalId,
+            `service-task-${index}`,
+            {
+              msdyn_name: `${taskType.msdyn_name} — ${workorder.msdyn_name}`,
+              msdyn_workorder: workorder.msdyn_workorderid,
+              msdyn_tasktype: taskType.msdyn_servicetasktypeid,
+              msdyn_description: taskType.msdyn_description,
+              msdyn_percentcomplete: 0,
+              msdyn_inspectiontaskresult: null,
+            },
+          ),
+        );
+        return this._actionChangesResponse(
+          action,
+          [
+            this._actionCreate("msdyn_workorders", workorder),
+            this._actionCreate("msdyn_resourcerequirements", requirement),
+            this._actionCreate("msdyn_workorderincidents", workorderIncident),
+            ...tasks.map((task) => this._actionCreate("msdyn_workorderservicetasks", task)),
+          ],
+          logicalId,
+        );
+      }
+
+      if (action === "ScheduleWorkOrder") {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "msdyn_workorders",
+          ["WorkOrderId", "msdyn_workorderid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (
+          target.record.statecode !== 0 ||
+          target.record.msdyn_systemstatus !== 690970000
+        ) {
+          throw new TypeError(
+            "only active unscheduled work orders can be scheduled",
+          );
+        }
+        const resourceId = normalizedRecordId(payload.ResourceId);
+        const resource = this._lookup("bookableresources", resourceId);
+        if (!resource || resource.statecode !== 0) {
+          throw new TypeError("ScheduleWorkOrder requires an active resource");
+        }
+        const requirement = this._records("msdyn_resourcerequirements").find(
+          (item) => item.msdyn_workorder === target.id && item.msdyn_isprimary,
+        );
+        if (
+          !requirement ||
+          requirement.statecode !== 0 ||
+          requirement.statuscode !== 1
+        ) {
+          throw new TypeError(
+            "work order requires an active primary requirement",
+          );
+        }
+        const status = this._bookingStatus(690970000);
+        const booking = this._newActionRecord(
+          "bookableresourcebookings",
+          logicalId,
+          "booking",
+          {
+            name: `${target.record.msdyn_name} booking`,
+            resource: resourceId,
+            bookingstatus: status.bookingstatusid,
+            starttime: normalizeUtc(payload.StartTime, "StartTime"),
+            endtime: normalizeUtc(payload.EndTime, "EndTime"),
+            msdyn_workorder: target.id,
+            msdyn_resourcerequirement: requirement.msdyn_resourcerequirementid,
+            statecode: 0,
+            statuscode: 1,
+          },
+        );
+        this._prepareDerived("bookableresourcebookings", booking, payload, null);
+        return this._actionChangesResponse(
+          action,
+          [
+            this._actionUpdate("msdyn_workorders", target.record, {
+              msdyn_systemstatus: 690970001,
+              msdyn_timefrompromised: booking.starttime,
+              msdyn_timetopromised: booking.endtime,
+            }),
+            this._actionCreate("bookableresourcebookings", booking),
+          ],
+          logicalId,
+        );
+      }
+
+      if (["DispatchWorkOrder", "StartWorkOrder"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "msdyn_workorders",
+          ["WorkOrderId", "msdyn_workorderid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 0) throw new TypeError("work order is terminal");
+        const starting = action === "StartWorkOrder";
+        if (
+          (!starting && target.record.msdyn_systemstatus !== 690970001) ||
+          (starting && ![690970001, 690970002].includes(target.record.msdyn_systemstatus))
+        ) {
+          throw new TypeError(`work order cannot ${starting ? "start service" : "dispatch"} from its current phase`);
+        }
+        const nextStatus = this._bookingStatus(starting ? 690970002 : 690970001);
+        const bookings = this._records("bookableresourcebookings").filter(
+          (booking) => booking.msdyn_workorder === target.id && booking.statecode === 0,
+        );
+        if (!bookings.length) throw new TypeError("work order has no active booking");
+        const changes = [
+          this._actionUpdate("msdyn_workorders", target.record, {
+            msdyn_systemstatus: starting ? 690970002 : 690970001,
+            msdyn_firstarrivedon: starting
+              ? now
+              : target.record.msdyn_firstarrivedon,
+          }),
+          ...bookings.map((booking) =>
+            this._actionUpdate("bookableresourcebookings", booking, {
+              bookingstatus: nextStatus.bookingstatusid,
+            }),
+          ),
+        ];
+        return this._actionChangesResponse(action, changes, logicalId);
+      }
+
+      if (["CompleteBooking", "CancelBooking"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "bookableresourcebookings",
+          ["BookingId", "bookableresourcebookingid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        if (target.record.statecode !== 0) throw new TypeError("booking is already terminal");
+        const completed = action === "CompleteBooking";
+        const status = this._bookingStatus(completed ? 690970003 : 690970004);
+        const workorder = this._lookup("msdyn_workorders", target.record.msdyn_workorder);
+        const booking = this._actionUpdate("bookableresourcebookings", target.record, {
+          bookingstatus: status.bookingstatusid,
+          statecode: 1,
+          statuscode: 2,
+        });
+        const workorderChange = this._actionUpdate("msdyn_workorders", workorder, {
+          msdyn_systemstatus: completed
+            ? 690970002
+            : workorder.msdyn_systemstatus,
+        });
+        return this._actionChangesResponse(
+          action,
+          [booking, workorderChange],
+          logicalId,
+        );
+      }
+
+      if (["CompleteWorkOrder", "CancelWorkOrder", "ReopenWorkOrder"].includes(action)) {
+        const target = this._actionCurrent(
+          route,
+          payload,
+          "msdyn_workorders",
+          ["WorkOrderId", "msdyn_workorderid"],
+          headers,
+        );
+        if (target.precondition) return target.precondition;
+        const bookings = this._records("bookableresourcebookings").filter(
+          (booking) => booking.msdyn_workorder === target.id,
+        );
+        const tasks = this._records("msdyn_workorderservicetasks").filter(
+          (task) => task.msdyn_workorder === target.id,
+        );
+        if (action === "CompleteWorkOrder") {
+          if (target.record.statecode !== 0) throw new TypeError("work order is terminal");
+          if (bookings.some((booking) => booking.statecode === 0)) {
+            throw new TypeError("all bookings must be completed or canceled");
+          }
+          if (!tasks.length || tasks.some((task) => task.msdyn_percentcomplete !== 100)) {
+            throw new TypeError("all service tasks must be complete");
+          }
+          const childChanges = [];
+          for (const entity of [
+            "msdyn_resourcerequirements",
+            "msdyn_workorderservicetasks",
+            "msdyn_workorderproducts",
+            "msdyn_workorderservices",
+            "msdyn_workorderincidents",
+          ]) {
+            for (const child of this._records(entity).filter(
+              (record) => record.msdyn_workorder === target.id,
+            )) {
+              childChanges.push(
+                this._actionUpdate(entity, child, {
+                  statecode: 1,
+                  statuscode: 2,
+                }),
+              );
+            }
+          }
+          return this._actionChangesResponse(
+            action,
+            [
+              this._actionUpdate("msdyn_workorders", target.record, {
+                msdyn_systemstatus: 690970003,
+                msdyn_completedon: now,
+                statecode: 1,
+                statuscode: 2,
+              }),
+              ...childChanges,
+            ],
+            logicalId,
+          );
+        }
+        if (action === "CancelWorkOrder") {
+          if (target.record.statecode !== 0) throw new TypeError("work order is terminal");
+          const canceledStatus = this._bookingStatus(690970004);
+          const changes = [
+            this._actionUpdate("msdyn_workorders", target.record, {
+              msdyn_systemstatus: 690970005,
+              msdyn_completedon: now,
+              statecode: 1,
+              statuscode: 2,
+            }),
+          ];
+          for (const booking of bookings.filter((item) => item.statecode === 0)) {
+            changes.push(
+              this._actionUpdate("bookableresourcebookings", booking, {
+                bookingstatus: canceledStatus.bookingstatusid,
+                statecode: 1,
+                statuscode: 2,
+              }),
+            );
+          }
+          for (const task of tasks) {
+            changes.push(
+              this._actionUpdate("msdyn_workorderservicetasks", task, {
+                msdyn_percentcomplete: 100,
+                statecode: 1,
+                statuscode: 2,
+              }),
+            );
+          }
+          for (const entity of [
+            "msdyn_resourcerequirements",
+            "msdyn_workorderproducts",
+            "msdyn_workorderservices",
+            "msdyn_workorderincidents",
+          ]) {
+            for (const child of this._records(entity).filter(
+              (record) => record.msdyn_workorder === target.id,
+            )) {
+              changes.push(
+                this._actionUpdate(entity, child, {
+                  statecode: 1,
+                  statuscode: 2,
+                }),
+              );
+            }
+          }
+          return this._actionChangesResponse(action, changes, logicalId);
+        }
+        if (target.record.statecode !== 1) throw new TypeError("only terminal work orders can reopen");
+        const requirement = this._records("msdyn_resourcerequirements").find(
+          (item) => item.msdyn_workorder === target.id && item.msdyn_isprimary,
+        );
+        const changes = [
+          this._actionUpdate("msdyn_workorders", target.record, {
+            msdyn_systemstatus: 690970000,
+            msdyn_firstarrivedon: null,
+            msdyn_completedon: null,
+            statecode: 0,
+            statuscode: 1,
+          }),
+          ...tasks.map((task) =>
+            this._actionUpdate("msdyn_workorderservicetasks", task, {
+              msdyn_percentcomplete: 0,
+              msdyn_inspectiontaskresult: null,
+              statecode: 0,
+              statuscode: 1,
+            }),
+          ),
+        ];
+        for (const entity of [
+          "msdyn_resourcerequirements",
+          "msdyn_workorderproducts",
+          "msdyn_workorderservices",
+          "msdyn_workorderincidents",
+        ]) {
+          for (const child of this._records(entity).filter(
+            (record) => record.msdyn_workorder === target.id,
+          )) {
+            changes.push(
+              this._actionUpdate(entity, child, {
+                statecode: 0,
+                statuscode: 1,
+              }),
+            );
+          }
+        }
+        return this._actionChangesResponse(action, changes, logicalId);
+      }
+
+      throw new TypeError(`action ${action} is not registered`);
+    } catch (error) {
+      return errorResponse(400, "0x80060888", error.message);
+    }
+  }
+
+
   _handleMutation(method, route, init, headers, logicalId) {
     const definition = ENTITY_DEFINITIONS[route.entity];
     if (!definition) return errorResponse(404, "0x80060888", "Resource not found.");
@@ -2228,8 +4111,10 @@ export class TwinCore {
         return errorResponse(409, "0x80040237", "A record with the generated id already exists.");
       }
       try {
+        this._assertRecordWritable(route.entity, null, payload, "create");
         const record = { ...this._defaults(route.entity, creationToken, payload), ...payload };
         record[definition.id] = id;
+        this._prepareDerived(route.entity, record, payload, null);
         if (route.entity === "emails") this._ensureEmailParties(record, true);
         this._validateLookups(route.entity, record);
         validateRequiredFields(route.entity, record);
@@ -2271,6 +4156,8 @@ export class TwinCore {
             before: null,
           });
         }
+        const rollup = this._lineRollupChange(route.entity, record);
+        if (rollup) changes.push(rollup);
         const committed = this._commitBatch(changes, logicalId)[0].record;
         this.creationCounter = creationOrdinal;
         const headersOut = {
@@ -2295,6 +4182,11 @@ export class TwinCore {
     const precondition = this._ifMatch(current, headers);
     if (precondition) return precondition;
     if (method === "DELETE") {
+      try {
+        this._assertRecordWritable(route.entity, current, {}, "delete");
+      } catch (error) {
+        return errorResponse(400, "0x80060888", error.message);
+      }
       if (route.entity === "connections") {
         const reciprocal = this._records("connections").find(
           (record) =>
@@ -2304,25 +4196,29 @@ export class TwinCore {
         if (!reciprocal) {
           return errorResponse(409, "0x80040265", "The reciprocal connection is missing.");
         }
-        this._commitBatch(
-          [
-            {
-              entity: "connections",
-              id: current.connectionid,
-              record: null,
-              kind: "delete",
-              before: current,
-            },
-            {
-              entity: "connections",
-              id: reciprocal.connectionid,
-              record: null,
-              kind: "delete-reciprocal",
-              before: reciprocal,
-            },
-          ],
-          logicalId,
-        );
+        try {
+          this._commitBatch(
+            [
+              {
+                entity: "connections",
+                id: current.connectionid,
+                record: null,
+                kind: "delete",
+                before: current,
+              },
+              {
+                entity: "connections",
+                id: reciprocal.connectionid,
+                record: null,
+                kind: "delete-reciprocal",
+                before: reciprocal,
+              },
+            ],
+            logicalId,
+          );
+        } catch (error) {
+          return errorResponse(400, "0x80060888", error.message);
+        }
       } else {
         const references = this._deleteGuard(route.entity, route.id);
         if (references.length) {
@@ -2332,22 +4228,32 @@ export class TwinCore {
             `The record is referenced by ${references.length} related record(s).`,
           );
         }
-        this._commitBatch(
-          [{
+        const changes = [{
             entity: route.entity,
             id: route.id,
             record: null,
             kind: "delete",
             before: current,
-          }],
-          logicalId,
+          }];
+        const rollup = this._lineRollupChange(
+          route.entity,
+          null,
+          current,
+          true,
         );
+        if (rollup) changes.push(rollup);
+        try {
+          this._commitBatch(changes, logicalId);
+        } catch (error) {
+          return errorResponse(400, "0x80060888", error.message);
+        }
       }
       return emptyResponse(204);
     }
     let payload;
     try {
       payload = validatePayload(route.entity, parseBody(init.body), "PATCH");
+      this._assertRecordWritable(route.entity, current, payload, "update");
       const merged = { ...clone(current), ...payload, modifiedon: this.clock.now() };
       if (route.entity === "incidents" && payload.statecode !== undefined) {
         merged.resolvedon =
@@ -2365,6 +4271,7 @@ export class TwinCore {
       ) {
         merged.actualend = this.clock.now();
       }
+      this._prepareDerived(route.entity, merged, payload, current);
       if (route.entity === "emails") this._ensureEmailParties(merged);
       this._validateLookups(route.entity, merged);
       validateRequiredFields(route.entity, merged);
@@ -2378,11 +4285,7 @@ export class TwinCore {
         },
       ];
       if (
-        (route.entity === "accounts" && merged.name !== current.name) ||
-        (
-          route.entity === "contacts" &&
-          (merged.firstname !== current.firstname || merged.lastname !== current.lastname)
-        )
+        merged[definition.primaryName] !== current[definition.primaryName]
       ) {
         changes.push(...this._namePropagationChanges(route.entity, route.id, merged));
       }
@@ -2418,6 +4321,8 @@ export class TwinCore {
           before: reciprocalCurrent,
         });
       }
+      const rollup = this._lineRollupChange(route.entity, merged, current);
+      if (rollup) changes.push(rollup);
       const committed = this._commitBatch(changes, logicalId)[0].record;
       return preferRepresentation
         ? responseJson(clone(committed), 200, { etag: committed["@odata.etag"] })
@@ -2480,7 +4385,12 @@ export class TwinCore {
     }
 
     let response;
-    if (method === "GET") response = this._handleGet(route);
+    if (route.kind === "action") {
+      response =
+        method === "POST"
+          ? this._handleAction(route, init, headers, logicalId)
+          : errorResponse(405, "0x80060888", "Actions require POST.");
+    } else if (method === "GET") response = this._handleGet(route);
     else if (MUTATION_METHODS.has(method)) {
       response = this._handleMutation(method, route, init, headers, logicalId);
     } else {
@@ -2678,22 +4588,42 @@ export class TwinCore {
         const id = normalizedRecordId(record[definition.id]);
         if (seenIds.has(id)) throw new TypeError(`duplicate runtime id ${id}`);
         seenIds.add(id);
+        const actualProperties = Object.keys(record)
+          .filter((field) => !field.startsWith("@") && !field.includes("@OData."));
+        const expectedProperties = Object.keys(definition.schema.fields);
+        if (
+          actualProperties.sort(codeUnitCompare).join("\0") !==
+          expectedProperties.sort(codeUnitCompare).join("\0")
+        ) {
+          throw new TypeError(`${entity}(${id}) properties differ from its schema`);
+        }
         for (const [field, type] of Object.entries(definition.fields)) {
           if (record[field] === undefined) {
             if (!type.endsWith("?")) throw new TypeError(`${entity}.${field} is missing`);
             continue;
           }
-          validateFieldType(field, type, record[field]);
-          const allowed = definition.discriminators[field];
-          if (allowed && !allowed.includes(record[field])) {
-            throw new TypeError(`${entity}.${field} has an invalid discriminator`);
-          }
-          const range = definition.ranges[field];
-          if (range && (record[field] < range[0] || record[field] > range[1])) {
-            throw new TypeError(`${entity}.${field} is outside its declared range`);
-          }
+          validateFieldType(
+            field,
+            type,
+            record[field],
+            definition.schema.fields[field],
+          );
+          validateFieldConstraints(entity, field, record[field]);
         }
         validateRequiredFields(entity, record);
+        if (definition.schema.fields.exchangerate) {
+          const currency = this._lookup(
+            "transactioncurrencies",
+            record.transactioncurrencyid,
+          );
+          if (
+            !currency ||
+            decimalUnits(currency.exchangerate, 6) <= 0n ||
+            record.exchangerate !== currency.exchangerate
+          ) {
+            throw new TypeError(`${entity} has a stale transaction exchange rate`);
+          }
+        }
         const expected = clone(record);
         this._decorateLookups(entity, expected);
         if (canonicalStringify(expected) !== canonicalStringify(record)) {
@@ -2706,6 +4636,31 @@ export class TwinCore {
         ) {
           throw new TypeError(`${entity}(${id}) has an invalid runtime ETag`);
         }
+      }
+    }
+    for (const product of this._records("products")) {
+      const unit = this._lookup("uoms", product.defaultuomid);
+      if (!unit || unit.uomscheduleid !== product.defaultuomscheduleid) {
+        throw new TypeError("product default UOM is outside its unit group");
+      }
+    }
+    for (const currency of this._records("transactioncurrencies")) {
+      if (decimalUnits(currency.exchangerate, 6) <= 0n) {
+        throw new TypeError("transaction currency exchange rate must be positive");
+      }
+    }
+    for (const price of this._records("productpricelevels")) {
+      const priceList = this._lookup("pricelevels", price.pricelevelid);
+      const product = this._lookup("products", price.productid);
+      const unit = this._lookup("uoms", price.uomid);
+      if (
+        !priceList ||
+        !product ||
+        !unit ||
+        price.transactioncurrencyid !== priceList.transactioncurrencyid ||
+        unit.uomscheduleid !== product.defaultuomscheduleid
+      ) {
+        throw new TypeError("product price level currency or UOM is inconsistent");
       }
     }
     const pairs = new Map();
@@ -2734,6 +4689,266 @@ export class TwinCore {
         throw new TypeError(`connection pair ${pairId} is not reciprocal`);
       }
     }
+    for (const [lineEntity, contract] of Object.entries(SALES_LINE_CONTRACTS)) {
+      const lines = this._records(lineEntity);
+      for (const line of lines) {
+        const base = multiplyDecimal(line.quantity, 2, line.priceperunit, 2);
+        const extended =
+          decimalUnits(base, 2) -
+          decimalUnits(line.manualdiscountamount, 2) +
+          decimalUnits(line.tax, 2);
+        const parent = this._lookup(
+          contract.parentEntity,
+          line[contract.parentField],
+        );
+        const priceLevel = parent
+          ? this._lookup("pricelevels", parent.pricelevelid)
+          : null;
+        const currency = parent
+          ? this._lookup("transactioncurrencies", parent.transactioncurrencyid)
+          : null;
+        const productPrice = parent
+          ? this._records("productpricelevels").find(
+              (price) =>
+                price.productid === line.productid &&
+                price.pricelevelid === parent.pricelevelid &&
+                price.uomid === line.uomid &&
+                price.transactioncurrencyid === parent.transactioncurrencyid,
+            )
+          : null;
+        if (
+          !parent ||
+          !priceLevel ||
+          priceLevel.statecode !== 0 ||
+          !currency ||
+          currency.statecode !== 0 ||
+          priceLevel.transactioncurrencyid !== parent.transactioncurrencyid ||
+          !productPrice ||
+          decimalUnits(line.quantity, 2) <= 0n ||
+          extended < 0n ||
+          line.baseamount !== base ||
+          line.extendedamount !== decimalText(extended, 2) ||
+          line.transactioncurrencyid !== parent.transactioncurrencyid ||
+          line.exchangerate !== parent.exchangerate
+        ) {
+          throw new TypeError(
+            `${lineEntity} has invalid pricing, arithmetic, or parent currency`,
+          );
+        }
+      }
+      for (const parent of this._records(contract.parentEntity)) {
+        const priceLevel = this._lookup("pricelevels", parent.pricelevelid);
+        const currency = this._lookup(
+          "transactioncurrencies",
+          parent.transactioncurrencyid,
+        );
+        if (
+          !priceLevel ||
+          priceLevel.statecode !== 0 ||
+          !currency ||
+          currency.statecode !== 0 ||
+          priceLevel.transactioncurrencyid !== parent.transactioncurrencyid
+        ) {
+          throw new TypeError(
+            `${contract.parentEntity} has an inactive or mismatched price list`,
+          );
+        }
+        const expected = clone(parent);
+        this._applyDocumentTotals(
+          expected,
+          lines.filter(
+            (line) =>
+              line[contract.parentField] ===
+              parent[ENTITY_DEFINITIONS[contract.parentEntity].id],
+          ),
+        );
+        for (const field of [
+          "totallineitemamount",
+          "totaldiscountamount",
+          "totaltax",
+          "totalamount",
+        ]) {
+          if (expected[field] !== parent[field]) {
+            throw new TypeError(`${contract.parentEntity} has stale line totals`);
+          }
+        }
+      }
+    }
+    for (const requirement of this._records("msdyn_resourcerequirements")) {
+      const start = new Date(requirement.msdyn_fromdate).valueOf();
+      const end = new Date(requirement.msdyn_todate).valueOf();
+      if (
+        !Number.isSafeInteger(start) ||
+        !Number.isSafeInteger(end) ||
+        start >= end
+      ) {
+        throw new TypeError("resource requirement has an invalid window");
+      }
+    }
+    const intervals = new Map();
+    for (const booking of this._records("bookableresourcebookings")) {
+      const status = this._lookup("bookingstatuses", booking.bookingstatus);
+      if (!status) throw new TypeError("booking status does not resolve");
+      const requirement = this._lookup(
+        "msdyn_resourcerequirements",
+        booking.msdyn_resourcerequirement,
+      );
+      const resource = this._lookup("bookableresources", booking.resource);
+      const start = new Date(booking.starttime).valueOf();
+      const end = new Date(booking.endtime).valueOf();
+      const requirementStart = new Date(requirement?.msdyn_fromdate).valueOf();
+      const requirementEnd = new Date(requirement?.msdyn_todate).valueOf();
+      if (
+        !requirement ||
+        requirement.msdyn_workorder !== booking.msdyn_workorder ||
+        !resource ||
+        start >= end ||
+        (end - start) / 60000 !== booking.duration ||
+        start < requirementStart ||
+        end > requirementEnd ||
+        (booking.statecode === 0 &&
+          (resource.statecode !== 0 || requirement.statecode !== 0)) ||
+        (booking.statecode === 0 && status.msdyn_statuscompletesworkorder) ||
+        (booking.statecode === 1 && !status.msdyn_statuscompletesworkorder)
+      ) {
+        throw new TypeError("booking state, resource, or requirement window is inconsistent");
+      }
+      if (status.msdyn_fieldservicestatus === 690970004) continue;
+      const rows = intervals.get(booking.resource) || [];
+      rows.push([
+        start,
+        end,
+        booking.bookableresourcebookingid,
+      ]);
+      intervals.set(booking.resource, rows);
+    }
+    for (const rows of intervals.values()) {
+      rows.sort((left, right) => left[0] - right[0] || codeUnitCompare(left[2], right[2]));
+      for (let index = 1; index < rows.length; index += 1) {
+        if (rows[index - 1][1] > rows[index][0]) {
+          throw new TypeError("resource bookings overlap");
+        }
+      }
+    }
+    for (const workorder of this._records("msdyn_workorders")) {
+      const requirements = this._records("msdyn_resourcerequirements").filter(
+        (requirement) =>
+          requirement.msdyn_workorder === workorder.msdyn_workorderid &&
+          requirement.msdyn_isprimary,
+      );
+      if (requirements.length !== 1) {
+        throw new TypeError("work order must have one primary requirement");
+      }
+      const asset = this._lookup(
+        "msdyn_customerassets",
+        workorder.msdyn_customerasset,
+      );
+      const serviceRequest = this._lookup(
+        "incidents",
+        workorder.msdyn_servicerequest,
+      );
+      const account =
+        serviceRequest?.customeridtype === "accounts"
+          ? serviceRequest.customerid
+          : this._lookup(
+              "contacts",
+              serviceRequest?.customerid,
+            )?.parentcustomerid;
+      if (
+        !asset ||
+        !serviceRequest ||
+        asset.msdyn_account !== workorder.msdyn_serviceaccount ||
+        account !== workorder.msdyn_serviceaccount
+      ) {
+        throw new TypeError(
+          "work order service request, asset, and account are inconsistent",
+        );
+      }
+      const terminal = TERMINAL_WORK_ORDER_STATUSES.has(
+        workorder.msdyn_systemstatus,
+      );
+      if (
+        (terminal && workorder.statecode !== 1) ||
+        (!terminal && workorder.statecode !== 0)
+      ) {
+        throw new TypeError("work order system status and state are inconsistent");
+      }
+      const workOrderChildren = [
+        "msdyn_resourcerequirements",
+        "msdyn_workorderservicetasks",
+        "msdyn_workorderproducts",
+        "msdyn_workorderservices",
+        "msdyn_workorderincidents",
+      ].flatMap((entity) =>
+        this._records(entity)
+          .filter((record) => record.msdyn_workorder === workorder.msdyn_workorderid)
+          .map((record) => ({ entity, record })),
+      );
+      for (const { entity, record } of workOrderChildren) {
+        if (
+          entity === "msdyn_workorderservicetasks" &&
+          record.statecode === 1 &&
+          record.msdyn_percentcomplete !== 100
+        ) {
+          throw new TypeError("inactive work order tasks must be complete");
+        }
+        if (entity === "msdyn_workorderincidents") {
+          if (
+            record.msdyn_customerasset &&
+            record.msdyn_customerasset !== workorder.msdyn_customerasset
+          ) {
+            throw new TypeError("work order incident asset differs from its parent");
+          }
+        }
+        if (entity === "msdyn_workorderproducts") {
+          const product = this._lookup("products", record.msdyn_product);
+          const unit = this._lookup("uoms", record.msdyn_unit);
+          if (
+            !product ||
+            !unit ||
+            product.producttypecode === 3 ||
+            unit.uomscheduleid !== product.defaultuomscheduleid ||
+            record.transactioncurrencyid !== product.transactioncurrencyid
+          ) {
+            throw new TypeError("work order product catalog values are inconsistent");
+          }
+        }
+        if (entity === "msdyn_workorderservices") {
+          const service = this._lookup("products", record.msdyn_service);
+          if (
+            !service ||
+            service.producttypecode !== 3 ||
+            record.transactioncurrencyid !== service.transactioncurrencyid
+          ) {
+            throw new TypeError("work order service currency is inconsistent");
+          }
+        }
+      }
+      if (terminal) {
+        const activeBookings = this._records("bookableresourcebookings").filter(
+          (booking) =>
+            booking.msdyn_workorder === workorder.msdyn_workorderid &&
+            booking.statecode === 0,
+        );
+        const incompleteTasks = this._records(
+          "msdyn_workorderservicetasks",
+        ).filter(
+          (task) =>
+            task.msdyn_workorder === workorder.msdyn_workorderid &&
+            task.msdyn_percentcomplete !== 100,
+        );
+        const activeChildren = workOrderChildren.filter(
+          ({ record }) => record.statecode === 0,
+        );
+        if (
+          activeBookings.length ||
+          incompleteTasks.length ||
+          activeChildren.length
+        ) {
+          throw new TypeError("terminal work order has active work");
+        }
+      }
+    }
     return true;
   }
 
@@ -2757,7 +4972,7 @@ export class TwinCore {
 
   exportRun() {
     return {
-      schemaVersion: 2,
+      schemaVersion: 3,
       seed: clone(this.initialSeed),
       epoch: this.clock.initial,
       retry: clone(this.retryDefaults),
@@ -2781,7 +4996,7 @@ export async function replayRun(run) {
   assertJsonValue(run, "run export");
   if (
     !run ||
-    ![1, 2].includes(run.schemaVersion) ||
+    ![1, 2, 3].includes(run.schemaVersion) ||
     !Array.isArray(run.requests) ||
     !run.seed
   ) {

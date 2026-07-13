@@ -15,7 +15,8 @@ python3 -m http.server --directory site 8000
 
 ## Change workflow
 
-1. Edit deterministic source in `data/source.json` or implementation files under `site/`.
+1. Edit canonical contracts in `data/schema.json`, compact fixtures in `data/source.json`, or
+   implementation files under `site/`.
 2. Run `python3 build.py` after source or generator changes.
 3. Review generated fixture, metadata, identity, and registry changes.
 4. Add focused Node or Python tests for behavior changes.
@@ -30,6 +31,9 @@ All sample data must remain fictional. Use `.example` domains and reserved 555 p
 lookup must resolve, state/status combinations must be valid, datetimes must include explicit
 offsets, and relationship rows must remain reciprocal. Never submit real personal data, tenant
 exports, credentials, or private URLs.
+
+Use only documented standard logical names. Keep uncertain behavior labeled as simulator policy.
+Money values are canonical decimal strings; never add binary floating-point accumulation.
 
 ## Browser rules
 

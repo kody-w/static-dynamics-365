@@ -1,11 +1,16 @@
 # Static Dynamics 365
 
-**Deterministic, zero-dependency Dataverse and Customer Service simulator.**
+**Deterministic, zero-dependency, standalone Customer Service, Sales, and Field Service tenant.**
 
 Static Dynamics 365 is an independently authored, browser-based environment for demos, tests,
-training, and integration prototyping. It combines a high-density Customer Service Hub interface,
-read-only OData-shaped JSON fixtures, and an injectable fetch-like runtime with deterministic
-queries, writes, failures, retries, concurrency, virtual time, traces, export, reset, and replay.
+training, and integration prototyping. One shared Aster Lane Office Systems instance contains
+Customer Service Hub, Sales Hub, and Field Service. The apps share customers, products, activities,
+owners, currencies, virtual time, faults, trace, writes, history, reset, export, and replay.
+
+Compatibility profile: **public-docs-subset**, source date **2026-07-12**. Behavior not established
+by the canonical schema or public documentation is labeled **simulator policy**. No trial was
+available for this release, so this project does not claim official, complete, certified, or
+drop-in parity.
 
 **Live demo:** https://kody-w.github.io/static-dynamics-365/
 
@@ -125,6 +130,7 @@ console.log(response.status, (await response.json()).value[0].name);
 | Live `$select`, `$filter`, `$orderby`, `$top`, `$skip`, `$count` | No | Yes |
 | Record GET and OData-shaped errors | No | Yes |
 | POST, PATCH, DELETE | No | Yes |
+| Sales, case-resolution, scheduling, booking, and work-order actions | No | Yes |
 | `If-Match`, ABA-safe ETags, idempotent logical requests | No | Yes |
 | 429, 503, network, timeout, malformed, and post-commit-loss faults | No | Yes |
 | Virtual retry/backoff and virtual UTC advancement | No | Yes |
@@ -138,7 +144,7 @@ disappear when the tab closes or the simulation is reset.
 
 | Area | Supported subset |
 | --- | --- |
-| Entities | accounts, contacts, incidents, tasks, emails, connections |
+| Entities | 39 canonical shared, Customer Service, Sales, and Field Service sets; see [API.md](API.md) |
 | Reads | collection and record GET; deterministic stable ordering |
 | Queries | `$select`; simple typed `$filter` comparisons and `contains`, `startswith`, `endswith`; multi-field `$orderby`; `$top`; `$skip`; `$count` |
 | Writes | POST, merged PATCH validation, DELETE with relationship guards |
@@ -147,46 +153,84 @@ disappear when the tab closes or the simulation is reset.
 | Faults | network, timeout, malformed response, 429, 503, delay, post-commit response loss |
 | Time | strict offset-bearing input, fixed epoch, injected monotonic UTC clock, no wall-time sleeps |
 | Reproduction | canonical SHA-256 digests, append-only event trace, export and replay |
+| Money | nonnegative canonical decimal inputs, fixed-point half-up arithmetic, and nonnegative derived totals |
+| Relationships | schema-driven lookups, reverse delete guards, display propagation, reciprocal connections, and line rollups |
+| Actions | schema-declared binding/output contracts with projected-state atomic validation |
 
 Unsupported query grammar is rejected with a deterministic 400 response rather than ignored.
 
-## Customer Service Hub
+## One tenant, three apps
 
-The independently authored interface includes:
+The launcher switches between app-prefixed routes while retaining one `TwinCore` instance. Legacy
+Customer Service hashes redirect to `#/cs/...`; current prefixes are `#/cs/...`, `#/sales/...`, and
+`#/field/...`. Dirty forms guard app switching and browser history. Dashboard and grid state are
+isolated per app.
 
-- App launcher, global search, Quick Create, responsive sitemap, command bars, and accessible
-  dialogs.
-- Customer Service and Service Activity dashboards with different derived components.
-- Accounts, Contacts, Cases, and combined Email/Task Activities with system views,
-  display-value search, stable sorting, selection, and 50-row paging.
-- Summary, Details, and Related form tabs with roving keyboard behavior, exact dirty-state
-  reversion, browser Back/Forward protection, stale-ETag handling, and closed-record read-only
-  behavior.
-- Explicit task Complete/Cancel and case Resolve/Cancel/Reopen commands.
-- Account and Contact related activities plus resolved Contact relationships.
-- Truthful empty Queues, Knowledge Articles, and Knowledge Search experiences.
-- Service Management pages for virtual time, fault plans, API inspection, trace, export, replay,
-  reset, and the deployment-boundary disclosure.
+### Customer Service Hub
 
-The UI uses original CSS, safe inline SVG geometry, system fonts, and no copied product assets.
+- Customer Service and Service Activity dashboards with simulator-policy deadline labels.
+- Accounts, Contacts, Cases, Activities, forms, related data, and lifecycle commands.
+- `CloseIncident` atomically resolves a case and creates an `incidentresolution`; direct case PATCH
+  remains only as a schema-v2 compatibility behavior.
+- Service Management provides virtual time, fault plans, API inspection, trace, export, replay, and
+  reset. It is tooling inside Customer Service, not a fourth business app.
+
+### Sales Hub
+
+- My Work, Customers, Sales, and Catalog sitemap groups.
+- Leads, Opportunities, Quotes, Orders, Invoices, Products, and Price Lists with live grids, forms,
+  related lines/documents/activities, and resolved lookups.
+- Sales Pipeline and Sales Performance dashboards derive every value from runtime state.
+- Active views use each entity's declared state/status vectors; Active Quotes means Quote state
+  **Active**, not Draft.
+- Product New/Quick Create exposes both default UOM and unit group; runtime also derives and
+  cross-checks `defaultuomscheduleid` from the selected UOM.
+- Registered actions qualify/disqualify/reopen leads; win/lose/reopen opportunities; generate,
+  activate, revise, win, and close quotes; convert quote to order; cancel/fulfill orders; convert
+  order to invoice; and pay/cancel invoices.
+- Quote validity uses documented `effectivefrom`/`effectiveto`; Order and Invoice do not expose
+  invented effective ranges, and detail/intersection sets omit unsupported lifecycle pairs.
+- Conversions preserve source lineage and immutable pricing snapshots. Active matching currencies,
+  price lists, product prices, and exchange-rate snapshots are enforced. Headers with lines cannot
+  switch currency or price list because this release has no migration adapter. Closed records and
+  lines are read-only outside actions.
+
+### Field Service
+
+- My Work, Customers, Service Delivery, Assets, and functional reference settings.
+- Field Service Operations and Technician Day dashboards.
+- Work Orders, Bookings, Customer Assets, tasks, products, requirements, cases, accounts, and service
+  history are connected through standard documented fields.
+- Work orders use documented `msdyn_servicerequest`, `msdyn_firstarrivedon`, and
+  `msdyn_completedon` names. Customer asset remains on Work Order; Case has no simulated direct
+  customer-asset extension.
+- Registered actions create a work order and primary requirement, schedule with UTC half-open
+  overlap protection and requirement-window containment, dispatch, start service, complete/cancel
+  bookings, and complete/cancel/reopen work orders. Only active resources and active primary
+  requirements can be scheduled. Generic child writes validate the projected aggregate and cannot
+  mutate terminal work orders. Advancing virtual time never changes status.
+- A schedule board, inventory, territories, GPS/maps, and technician tracking are deliberately not
+  simulated.
+
+The shell, SVG geometry, CSS, and text are independently authored. A persistent disclosure identifies
+it as an independent simulator using synthetic data.
 
 ## Fixture profile
 
-The deterministic source generates:
+The deterministic seed contains **634 records across 39 stored entity sets**:
 
-| Entity set | Count |
-| --- | ---: |
-| accounts | 12 |
-| contacts | 30 |
-| incidents (cases) | 24 |
-| tasks | 36 |
-| emails | 60 |
-| connections | 40 |
+| Area | Entity sets and exact counts |
+| --- | --- |
+| Existing shared service | accounts 12; contacts 30; incidents 24; tasks 36; emails 60; connections 40 |
+| Tenant foundation | businessunits 1; systemusers 10; transactioncurrencies 4; uomschedules 1; uoms 1; products 12; pricelevels 4; productpricelevels 48 |
+| Sales | leads 24; opportunities 15; opportunityproducts 36; quotes 12; quotedetails 30; salesorders 6; salesorderdetails 15; invoices 5; invoicedetails 12; opportunitycloses 8 |
+| Case fidelity | incidentresolutions 7 |
+| Field Service | msdyn_customerassets 18; msdyn_workorders 15; msdyn_workorderincidents 15; msdyn_workorderservicetasks 45; msdyn_workorderproducts 20; msdyn_workorderservices 15; msdyn_resourcerequirements 15; bookableresources 4; bookableresourcebookings 13; bookingstatuses 5; msdyn_workordertypes 3; msdyn_incidenttypes 4; msdyn_servicetasktypes 6; msdyn_priorities 3 |
 
-Records include ownership display fields, customer and regarding lookups, reciprocal relationships,
-priority and lifecycle distributions, sent and received email, open/completed/canceled tasks,
-overdue tasks, active/resolved/canceled cases, explicit UTC timestamps, and content-derived ETags.
-All lookup targets resolve.
+All lookups resolve. `WhoAmI` resolves to a stored user and business unit. Seeded semantic anchors
+connect lead → opportunity → quote → order → invoice → equipment assets and case/service request →
+work order → asset/requirement → booking → tasks/products. Values use reserved numbers, `.example` domains,
+fixed UTC, UUIDv5 IDs, and no real people or customer data.
 
 ## Deterministic scenarios
 
@@ -202,34 +246,54 @@ transport loss, timeout, malformed response, deterministic delay, and a response
 ## Architecture
 
 ```text
-data/source.json
-      │
-      ▼
-  build.py ─────► data/seed.json
-      │          registry.json
-      └────────► site/data/seed.json
-                 site/api/data/v9.2/*.json
+data/schema.json ─┐
+                  ├─► build.py ─► data/seed.json
+data/source.json ─┘               registry.json
+                                  site/tenant-schema.mjs
+                                  site/data/{schema,seed}.json
+                                  site/api/data/v9.2/*.json
 
-site/index.html ─► site/app.mjs ─► app-helpers.mjs
-                               └► twin-core.mjs ─► browser-local state
+site/index.html ─► site/app.mjs ─► app-helpers.mjs ─┐
+                               └► twin-core.mjs ────┴─► tenant-schema.mjs
 ```
 
-The build validates source shape before writing, constructs every output in memory, validates
-required fields, GUID uniqueness, UTC dates, lifecycle pairs, lookup integrity, reciprocal
-connections, and source independence, then stages deterministic bytes inside the repository before
-replacement.
+`data/schema.json` is the canonical declaration for entity sets, logical names, keys, primary
+names, fields, EDM types, nullability, scale, options, status vectors, lookups, display fields,
+delete policy, mutability, app scopes, UI descriptors, action bindings/outputs, and compatibility policy. Python
+validation/generation, generated JavaScript runtime definitions, metadata, registry, and most UI
+descriptors derive from it. Singular logical names are explicit and are never produced by trimming
+an entity-set name.
+
+`TwinCore` remains a generic unit of work. A schema-driven reverse index handles lookup validation,
+delete guards, display-name propagation, and cross-app related data. Narrow registered adapters add
+reciprocal connection behavior, fixed-point line rollups, document conversion, case resolution,
+Sales lifecycle, and Field Service scheduling/lifecycle.
+
+The generated module also exports authoritative `TENANT_CONFIG`. Runtime construction rejects any
+forged seed tenant, identity, fixture chain, schema, action, app, namespace, version, policy,
+metadata context, or digest. Runtime metadata is rebuilt from generated contracts and live counts.
+Task and Email forms derive app-aware polymorphic Regarding targets from the schema across service,
+Sales, asset, and work-order records.
+
+Seed, schema, and replay formats are version 3. A version-3 runtime accepts replay envelope versions
+1–3 only when they contain a version-3 seed. A version-2 seed is rejected with an explicit message;
+it must be replayed with the archived version-2 runtime because it lacks the 33 added stored sets
+and canonical schema needed to reconstruct the tenant.
 
 ## Repository layout
 
 ```text
 .github/workflows/       CI and Pages deployment
-data/                    deterministic source and generated runtime seed
+data/schema.json         canonical declarative tenant schema
+data/source.json         compact synthetic customer source
+data/seed.json           generated version-3 runtime seed
 site/                    deployable application root
 site/api/data/v9.2/      read-only OData-shaped JSON fixtures
 tests/                   Node built-in tests and Python unittest suites
 build.py                 standard-library deterministic generator
 manifest.json            project capability manifest
 registry.json            generated output hashes, sizes, and counts
+API.md                   static/runtime API and action reference
 LIMITATIONS.md           explicit compatibility boundaries
 SECURITY.md              security and synthetic-data policy
 CONTRIBUTING.md          contribution workflow
@@ -248,6 +312,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 node --check site/twin-core.mjs
 node --check site/app-helpers.mjs
 node --check site/app.mjs
+node --check site/tenant-schema.mjs
 git diff --check
 ```
 
@@ -255,7 +320,11 @@ Tests cover byte-identical generation, exact fixture vectors and distributions, 
 integrity, CRUD and malformed requests, query rejection, ETag concurrency and ABA safety,
 idempotency, retries and faults, post-commit loss, virtual time, replay/reset, deletion guards, UI
 helpers and lifecycle labels, history and tabs, source security contracts, project-subpath loading,
-and local static HTTP smoke.
+registry-driven local HTTP smoke, fixed-point totals, Sales conversion lineage, every lifecycle
+family, negative and zero boundaries, metadata tampering, every action binding, 2035/default and
+equivalent-offset requirement windows, seed-wide booking containment, terminal child CRUD guards,
+work-order completion guards, generic cross-app activities, Product New-form save, app-prefixed
+shell declarations, and full multi-app export/reset/replay.
 
 ## Security and synthetic-data policy
 
