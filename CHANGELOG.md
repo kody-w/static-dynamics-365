@@ -6,6 +6,14 @@ All notable project changes are documented here.
 
 ### Added
 
+- Ten industry customer accounts (healthcare, credit union, energy cooperative, city and federal
+  government, manufacturing, grocery retail, software, staffing, higher education) with matching
+  contacts and fourteen vertical service cases, growing the tenant to 22 accounts, 40 contacts,
+  and 38 cases so cross-industry demos and agent templates find realistic records.
+- Customer assets now derive their account from the service case they pair with (workorder[i] ↔
+  incidents[i]), keeping asset/case/service-account linkage consistent at any account count while
+  reproducing all previous records exactly.
+
 - One shared standalone tenant with app-prefixed Customer Service Hub, Sales Hub, and Field Service
   routes, app launcher, isolated view state, dirty-switch guards, and cross-app related data.
 - Canonical version-3 `data/schema.json` driving Python generation/validation, generated JavaScript

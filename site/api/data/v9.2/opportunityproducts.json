@@ -65,7 +65,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"e6f48b3cc163f51e9fd9e73f\"",
+      "@odata.etag": "W/\"d52907d6a02f23dcab8ab60b\"",
       "baseamount": "1098.00",
       "createdon": "2025-08-18T04:00:00.000Z",
       "description": "Printer finishing module",
@@ -76,8 +76,8 @@
       "manualdiscountamount": "25.00",
       "modifiedon": "2025-08-18T08:00:00.000Z",
       "opportunityid": "52d3bb5b-cf48-5ced-aee0-98429bbdd9aa",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Cedar Hollow Printing — Managed print fleet refresh",
-      "opportunityidname": "Cedar Hollow Printing — Managed print fleet refresh",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Riverbend Medical Group — Managed print fleet refresh",
+      "opportunityidname": "Riverbend Medical Group — Managed print fleet refresh",
       "opportunityproductid": "12176a99-1721-5784-9d08-895ad2ea0d90",
       "ownerid": "a9d33055-32e6-5320-b3ef-570165f956ec",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Taylor Brooks",
@@ -282,7 +282,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"e122bcf09488b7e6601a445b\"",
+      "@odata.etag": "W/\"17ccb02546f4d157e92657be\"",
       "baseamount": "357.00",
       "createdon": "2025-08-19T03:00:00.000Z",
       "description": "High-yield black toner",
@@ -293,8 +293,8 @@
       "manualdiscountamount": "0.00",
       "modifiedon": "2025-08-19T08:00:00.000Z",
       "opportunityid": "52d3bb5b-cf48-5ced-aee0-98429bbdd9aa",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Cedar Hollow Printing — Managed print fleet refresh",
-      "opportunityidname": "Cedar Hollow Printing — Managed print fleet refresh",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Riverbend Medical Group — Managed print fleet refresh",
+      "opportunityidname": "Riverbend Medical Group — Managed print fleet refresh",
       "opportunityproductid": "33a0e363-3f0c-573f-8061-3b093326f77b",
       "ownerid": "a9d33055-32e6-5320-b3ef-570165f956ec",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Taylor Brooks",
@@ -592,7 +592,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"f96ce6cdf27ba4b1ac1aad7d\"",
+      "@odata.etag": "W/\"5aacb614f32630a2e262e241\"",
       "baseamount": "357.00",
       "createdon": "2025-08-22T11:00:00.000Z",
       "description": "High-yield black toner",
@@ -603,8 +603,8 @@
       "manualdiscountamount": "0.00",
       "modifiedon": "2025-08-22T19:00:00.000Z",
       "opportunityid": "402d7229-75c5-5cd2-b7aa-c0228f6cfd46",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Marigold Field Services — Mobile workstation expansion",
-      "opportunityidname": "Marigold Field Services — Mobile workstation expansion",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Prairie Wind Energy Cooperative — Mobile workstation expansion",
+      "opportunityidname": "Prairie Wind Energy Cooperative — Mobile workstation expansion",
       "opportunityproductid": "7982632a-6fef-51e9-b8b7-84a237a454d3",
       "ownerid": "b64f783d-7ef1-524b-8b9c-401a2de0bd08",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Sam Patel",
@@ -623,7 +623,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"2f47e5bb82be199c7c3809b8\"",
+      "@odata.etag": "W/\"89e6f43fe85c699a3caa6f01\"",
       "baseamount": "328.44",
       "createdon": "2025-08-21T12:00:00.000Z",
       "description": "High-yield black toner",
@@ -634,8 +634,8 @@
       "manualdiscountamount": "0.00",
       "modifiedon": "2025-08-21T19:00:00.000Z",
       "opportunityid": "a171d2b2-6644-5a01-87a3-6ead4d9cd3e9",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Juniper Ridge Furnishings — Document capture modernization",
-      "opportunityidname": "Juniper Ridge Furnishings — Document capture modernization",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Bluegrass Credit Union — Document capture modernization",
+      "opportunityidname": "Bluegrass Credit Union — Document capture modernization",
       "opportunityproductid": "7eaca703-8e1a-5a5b-9484-c20c5ad0d456",
       "ownerid": "effe48eb-4bc9-5721-b0c3-cc7beb01ca39",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Alex Kim",
@@ -685,7 +685,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"c6bb61850ba05f8d394f2c63\"",
+      "@odata.etag": "W/\"1f842cc8a3d65f4d675946a4\"",
       "baseamount": "389.00",
       "createdon": "2025-08-17T05:00:00.000Z",
       "description": "Office environment sensor kit",
@@ -696,8 +696,8 @@
       "manualdiscountamount": "0.00",
       "modifiedon": "2025-08-17T08:00:00.000Z",
       "opportunityid": "52d3bb5b-cf48-5ced-aee0-98429bbdd9aa",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Cedar Hollow Printing — Managed print fleet refresh",
-      "opportunityidname": "Cedar Hollow Printing — Managed print fleet refresh",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Riverbend Medical Group — Managed print fleet refresh",
+      "opportunityidname": "Riverbend Medical Group — Managed print fleet refresh",
       "opportunityproductid": "92f5601f-6bdd-5641-9ce4-5ab3d85bee4b",
       "ownerid": "a9d33055-32e6-5320-b3ef-570165f956ec",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Taylor Brooks",
@@ -902,7 +902,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"393c6bf05de7f08705dbfd8f\"",
+      "@odata.etag": "W/\"46fa3b1cfed4f0853d8b72e1\"",
       "baseamount": "289.00",
       "createdon": "2025-08-23T10:00:00.000Z",
       "description": "Color toner multipack",
@@ -913,8 +913,8 @@
       "manualdiscountamount": "0.00",
       "modifiedon": "2025-08-23T12:00:00.000Z",
       "opportunityid": "402d7229-75c5-5cd2-b7aa-c0228f6cfd46",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Marigold Field Services — Mobile workstation expansion",
-      "opportunityidname": "Marigold Field Services — Mobile workstation expansion",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Prairie Wind Energy Cooperative — Mobile workstation expansion",
+      "opportunityidname": "Prairie Wind Energy Cooperative — Mobile workstation expansion",
       "opportunityproductid": "c4032098-95ef-557c-be95-b28e304a5b32",
       "ownerid": "b64f783d-7ef1-524b-8b9c-401a2de0bd08",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Sam Patel",
@@ -1057,7 +1057,7 @@
       "uomidname": "Primary Unit"
     },
     {
-      "@odata.etag": "W/\"0c77d6a4e1967686197ff37c\"",
+      "@odata.etag": "W/\"372c807cc34d1ffe852ba5cf\"",
       "baseamount": "1010.16",
       "createdon": "2025-08-20T02:00:00.000Z",
       "description": "Printer finishing module",
@@ -1068,8 +1068,8 @@
       "manualdiscountamount": "0.00",
       "modifiedon": "2025-08-20T08:00:00.000Z",
       "opportunityid": "a171d2b2-6644-5a01-87a3-6ead4d9cd3e9",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Juniper Ridge Furnishings — Document capture modernization",
-      "opportunityidname": "Juniper Ridge Furnishings — Document capture modernization",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Bluegrass Credit Union — Document capture modernization",
+      "opportunityidname": "Bluegrass Credit Union — Document capture modernization",
       "opportunityproductid": "f01496a2-837f-5890-bbed-a844cc865309",
       "ownerid": "effe48eb-4bc9-5721-b0c3-cc7beb01ca39",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Alex Kim",

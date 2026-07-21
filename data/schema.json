@@ -1031,7 +1031,7 @@
       "deletePolicy": "restrict",
       "entitySet": "accounts",
       "entityType": "StaticDynamics365.account",
-      "expectedCount": 12,
+      "expectedCount": 22,
       "fields": {
         "accountid": {
           "edmType": "Edm.Guid",
@@ -2123,7 +2123,7 @@
       "deletePolicy": "restrict",
       "entitySet": "contacts",
       "entityType": "StaticDynamics365.contact",
-      "expectedCount": 30,
+      "expectedCount": 40,
       "fields": {
         "address1_city": {
           "edmType": "Edm.String",
@@ -2685,7 +2685,7 @@
       "deletePolicy": "restrict",
       "entitySet": "incidentresolutions",
       "entityType": "StaticDynamics365.incidentresolution",
-      "expectedCount": 7,
+      "expectedCount": 11,
       "fields": {
         "activityid": {
           "edmType": "Edm.Guid",
@@ -2843,7 +2843,7 @@
       "deletePolicy": "restrict",
       "entitySet": "incidents",
       "entityType": "StaticDynamics365.incident",
-      "expectedCount": 24,
+      "expectedCount": 38,
       "fields": {
         "caseorigincode": {
           "edmType": "Edm.Int32",

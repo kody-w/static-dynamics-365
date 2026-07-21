@@ -1029,7 +1029,7 @@
         "sales",
         "field-service"
       ],
-      "count": 12,
+      "count": 22,
       "deletePolicy": "restrict",
       "entityType": "StaticDynamics365.account",
       "key": "accountid",
@@ -2173,7 +2173,7 @@
         "sales",
         "field-service"
       ],
-      "count": 30,
+      "count": 40,
       "deletePolicy": "restrict",
       "entityType": "StaticDynamics365.contact",
       "key": "contactid",
@@ -2748,7 +2748,7 @@
       "appScopes": [
         "customer-service"
       ],
-      "count": 7,
+      "count": 11,
       "deletePolicy": "restrict",
       "entityType": "StaticDynamics365.incidentresolution",
       "key": "activityid",
@@ -2934,7 +2934,7 @@
         "customer-service",
         "field-service"
       ],
-      "count": 24,
+      "count": 38,
       "deletePolicy": "restrict",
       "entityType": "StaticDynamics365.incident",
       "key": "incidentid",
@@ -11027,7 +11027,7 @@
     }
   ],
   "namespace": "StaticDynamics365",
-  "schemaDigest": "fb657f4b0bd3961d30506f1e9a0f1c6001511f671a6664a5d41a9f87f5ec3c49",
+  "schemaDigest": "dc434e3017c0afdd9b888180f94d6e23e87a8108fdef8ba93440575112e85398",
   "schemaVersion": 3,
   "simulatorPolicies": [
     "Public-documentation compatibility subset; exact tenant metadata and privileges require later trial verification.",

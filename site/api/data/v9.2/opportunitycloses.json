@@ -24,7 +24,7 @@
       "subject": "Won: Maple Thread Textiles — Preventive maintenance program"
     },
     {
-      "@odata.etag": "W/\"4699bd4437b34928542df1a1\"",
+      "@odata.etag": "W/\"012fa1c44180d9586763340f\"",
       "activityid": "2f0bd3aa-1596-5d17-b869-a576e7c3b4af",
       "actualend": "2026-01-12T12:00:00.000Z",
       "actualrevenue": "0.00",
@@ -33,8 +33,8 @@
       "description": "Synthetic opportunity close record.",
       "modifiedon": "2025-07-25T14:00:00.000Z",
       "opportunityid": "a171d2b2-6644-5a01-87a3-6ead4d9cd3e9",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Juniper Ridge Furnishings — Document capture modernization",
-      "opportunityidname": "Juniper Ridge Furnishings — Document capture modernization",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Bluegrass Credit Union — Document capture modernization",
+      "opportunityidname": "Bluegrass Credit Union — Document capture modernization",
       "ownerid": "a9d33055-32e6-5320-b3ef-570165f956ec",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Taylor Brooks",
       "owneridname": "Taylor Brooks",
@@ -42,7 +42,7 @@
       "statecode@OData.Community.Display.V1.FormattedValue": "Inactive",
       "statuscode": 2,
       "statuscode@OData.Community.Display.V1.FormattedValue": "Completed",
-      "subject": "Lost: Juniper Ridge Furnishings — Document capture modernization"
+      "subject": "Lost: Bluegrass Credit Union — Document capture modernization"
     },
     {
       "@odata.etag": "W/\"b98b6dabddc2d664f1dda5cb\"",
@@ -129,7 +129,7 @@
       "subject": "Won: Harbor Pine Consulting — Mobile workstation expansion"
     },
     {
-      "@odata.etag": "W/\"5b541c8645d816be73ec102b\"",
+      "@odata.etag": "W/\"dc4d9510a52253e8fb6add36\"",
       "activityid": "c1a88d67-c689-5cef-89ae-410000082605",
       "actualend": "2026-01-13T12:00:00.000Z",
       "actualrevenue": "0.00",
@@ -138,8 +138,8 @@
       "description": "Synthetic opportunity close record.",
       "modifiedon": "2025-07-26T07:00:00.000Z",
       "opportunityid": "402d7229-75c5-5cd2-b7aa-c0228f6cfd46",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Marigold Field Services — Mobile workstation expansion",
-      "opportunityidname": "Marigold Field Services — Mobile workstation expansion",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Prairie Wind Energy Cooperative — Mobile workstation expansion",
+      "opportunityidname": "Prairie Wind Energy Cooperative — Mobile workstation expansion",
       "ownerid": "effe48eb-4bc9-5721-b0c3-cc7beb01ca39",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Alex Kim",
       "owneridname": "Alex Kim",
@@ -147,10 +147,10 @@
       "statecode@OData.Community.Display.V1.FormattedValue": "Inactive",
       "statuscode": 2,
       "statuscode@OData.Community.Display.V1.FormattedValue": "Completed",
-      "subject": "Lost: Marigold Field Services — Mobile workstation expansion"
+      "subject": "Lost: Prairie Wind Energy Cooperative — Mobile workstation expansion"
     },
     {
-      "@odata.etag": "W/\"e8f41ed51e77265591cb388b\"",
+      "@odata.etag": "W/\"06afab0560c54b8d8b5d1eec\"",
       "activityid": "e7e477d8-fa30-5a8e-9f1b-42f05f1dc478",
       "actualend": "2026-01-11T12:00:00.000Z",
       "actualrevenue": "0.00",
@@ -159,8 +159,8 @@
       "description": "Synthetic opportunity close record.",
       "modifiedon": "2025-07-24T14:00:00.000Z",
       "opportunityid": "52d3bb5b-cf48-5ced-aee0-98429bbdd9aa",
-      "opportunityid@OData.Community.Display.V1.FormattedValue": "Cedar Hollow Printing — Managed print fleet refresh",
-      "opportunityidname": "Cedar Hollow Printing — Managed print fleet refresh",
+      "opportunityid@OData.Community.Display.V1.FormattedValue": "Riverbend Medical Group — Managed print fleet refresh",
+      "opportunityidname": "Riverbend Medical Group — Managed print fleet refresh",
       "ownerid": "b64f783d-7ef1-524b-8b9c-401a2de0bd08",
       "ownerid@OData.Community.Display.V1.FormattedValue": "Sam Patel",
       "owneridname": "Sam Patel",
@@ -168,7 +168,7 @@
       "statecode@OData.Community.Display.V1.FormattedValue": "Inactive",
       "statuscode": 2,
       "statuscode@OData.Community.Display.V1.FormattedValue": "Completed",
-      "subject": "Lost: Cedar Hollow Printing — Managed print fleet refresh"
+      "subject": "Lost: Riverbend Medical Group — Managed print fleet refresh"
     }
   ]
 }

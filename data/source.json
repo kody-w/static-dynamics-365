@@ -49,75 +49,767 @@
     }
   ],
   "accounts": [
-    ["Cedar Hollow Printing", "cedarhollow.example", "Portland", "OR", "97205", "Printing"],
-    ["Juniper Ridge Furnishings", "juniperridge.example", "Boise", "ID", "83702", "Furniture"],
-    ["Marigold Field Services", "marigoldfield.example", "Austin", "TX", "78701", "Field Services"],
-    ["Blue Heron Stationery", "blueheron.example", "Madison", "WI", "53703", "Retail"],
-    ["Copper Kite Design", "copperkite.example", "Richmond", "VA", "23219", "Design"],
-    ["Willow Brook Legal", "willowbrook.example", "Columbus", "OH", "43215", "Legal Services"],
-    ["Orchard Signal Works", "orchardsignal.example", "Raleigh", "NC", "27601", "Electronics"],
-    ["Silver Elm Logistics", "silverelm.example", "Denver", "CO", "80202", "Logistics"],
-    ["Harbor Pine Consulting", "harborpine.example", "Boston", "MA", "02108", "Consulting"],
-    ["Maple Thread Textiles", "maplethread.example", "Nashville", "TN", "37219", "Textiles"],
-    ["Foxglove Learning", "foxglove.example", "Sacramento", "CA", "95814", "Education"],
-    ["Granite Finch Labs", "granitefinch.example", "Phoenix", "AZ", "85004", "Research"]
+    [
+      "Cedar Hollow Printing",
+      "cedarhollow.example",
+      "Portland",
+      "OR",
+      "97205",
+      "Printing"
+    ],
+    [
+      "Juniper Ridge Furnishings",
+      "juniperridge.example",
+      "Boise",
+      "ID",
+      "83702",
+      "Furniture"
+    ],
+    [
+      "Marigold Field Services",
+      "marigoldfield.example",
+      "Austin",
+      "TX",
+      "78701",
+      "Field Services"
+    ],
+    [
+      "Blue Heron Stationery",
+      "blueheron.example",
+      "Madison",
+      "WI",
+      "53703",
+      "Retail"
+    ],
+    [
+      "Copper Kite Design",
+      "copperkite.example",
+      "Richmond",
+      "VA",
+      "23219",
+      "Design"
+    ],
+    [
+      "Willow Brook Legal",
+      "willowbrook.example",
+      "Columbus",
+      "OH",
+      "43215",
+      "Legal Services"
+    ],
+    [
+      "Orchard Signal Works",
+      "orchardsignal.example",
+      "Raleigh",
+      "NC",
+      "27601",
+      "Electronics"
+    ],
+    [
+      "Silver Elm Logistics",
+      "silverelm.example",
+      "Denver",
+      "CO",
+      "80202",
+      "Logistics"
+    ],
+    [
+      "Harbor Pine Consulting",
+      "harborpine.example",
+      "Boston",
+      "MA",
+      "02108",
+      "Consulting"
+    ],
+    [
+      "Maple Thread Textiles",
+      "maplethread.example",
+      "Nashville",
+      "TN",
+      "37219",
+      "Textiles"
+    ],
+    [
+      "Foxglove Learning",
+      "foxglove.example",
+      "Sacramento",
+      "CA",
+      "95814",
+      "Education"
+    ],
+    [
+      "Granite Finch Labs",
+      "granitefinch.example",
+      "Phoenix",
+      "AZ",
+      "85004",
+      "Research"
+    ],
+    [
+      "Riverbend Medical Group",
+      "riverbendmed.example",
+      "Columbus",
+      "OH",
+      "43215",
+      "Healthcare"
+    ],
+    [
+      "Bluegrass Credit Union",
+      "bluegrasscu.example",
+      "Louisville",
+      "KY",
+      "40202",
+      "Financial Services"
+    ],
+    [
+      "Prairie Wind Energy Cooperative",
+      "prairiewind.example",
+      "Wichita",
+      "KS",
+      "67202",
+      "Energy"
+    ],
+    [
+      "City of Alder Creek",
+      "aldercreek.example",
+      "Alder Creek",
+      "CA",
+      "95004",
+      "State & Local Government"
+    ],
+    [
+      "Granite Peak Manufacturing",
+      "granitepeakmfg.example",
+      "Erie",
+      "PA",
+      "16501",
+      "Manufacturing"
+    ],
+    [
+      "Harbor Lights Grocery",
+      "harborlightsgrocery.example",
+      "Tacoma",
+      "WA",
+      "98402",
+      "Retail & CPG"
+    ],
+    [
+      "Summit Trail Software",
+      "summittrail.example",
+      "Boulder",
+      "CO",
+      "80302",
+      "Software"
+    ],
+    [
+      "Beacon Hill Staffing Partners",
+      "beaconhillstaffing.example",
+      "Boston",
+      "MA",
+      "02108",
+      "Professional Services"
+    ],
+    [
+      "Federal Plaza Services Agency",
+      "federalplaza.example",
+      "Washington",
+      "DC",
+      "20001",
+      "Federal Government"
+    ],
+    [
+      "Lakeview University",
+      "lakeviewuniv.example",
+      "Madison",
+      "WI",
+      "53703",
+      "Higher Education"
+    ]
   ],
   "contacts": [
-    ["Avery", "Bennett", 0, "Operations Coordinator"],
-    ["Mina", "Carver", 0, "Office Manager"],
-    ["Theo", "Dalton", 0, "Print Services Lead"],
-    ["Nora", "Everett", 1, "Purchasing Manager"],
-    ["Elias", "Foster", 1, "Facilities Coordinator"],
-    ["Sasha", "Grant", 1, "Showroom Manager"],
-    ["Remy", "Hayes", 2, "Dispatch Lead"],
-    ["Iris", "Jordan", 2, "Service Administrator"],
-    ["Caleb", "Kim", 2, "Regional Supervisor"],
-    ["Leona", "Marsh", 3, "Store Manager"],
-    ["Owen", "Nolan", 3, "Inventory Analyst"],
-    ["Priya", "Olsen", 3, "Buyer"],
-    ["Drew", "Palmer", 4, "Creative Director"],
-    ["Mae", "Quinn", 4, "Project Coordinator"],
-    ["Jonah", "Reed", 5, "Practice Administrator"],
-    ["Talia", "Stone", 5, "Records Manager"],
-    ["Emmett", "Tran", 6, "Production Planner"],
-    ["Lina", "Underwood", 6, "Quality Coordinator"],
-    ["Miles", "Vega", 7, "Route Manager"],
-    ["Anika", "Ward", 7, "Client Services Lead"],
-    ["Felix", "Xu", 8, "Engagement Manager"],
-    ["Cora", "Young", 8, "Business Analyst"],
-    ["Nico", "Zane", 9, "Plant Coordinator"],
-    ["Esme", "Archer", 9, "Sourcing Manager"],
-    ["Hugo", "Bell", 10, "Program Director"],
-    ["Rina", "Cole", 10, "Learning Coordinator"],
-    ["Silas", "Dunn", 11, "Lab Manager"],
-    ["Zoe", "Evans", 11, "Research Coordinator"],
-    ["Amir", "Flores", 6, "Account Coordinator"],
-    ["Wren", "Gibson", 7, "Operations Analyst"]
+    [
+      "Avery",
+      "Bennett",
+      0,
+      "Operations Coordinator"
+    ],
+    [
+      "Mina",
+      "Carver",
+      0,
+      "Office Manager"
+    ],
+    [
+      "Theo",
+      "Dalton",
+      0,
+      "Print Services Lead"
+    ],
+    [
+      "Nora",
+      "Everett",
+      1,
+      "Purchasing Manager"
+    ],
+    [
+      "Elias",
+      "Foster",
+      1,
+      "Facilities Coordinator"
+    ],
+    [
+      "Sasha",
+      "Grant",
+      1,
+      "Showroom Manager"
+    ],
+    [
+      "Remy",
+      "Hayes",
+      2,
+      "Dispatch Lead"
+    ],
+    [
+      "Iris",
+      "Jordan",
+      2,
+      "Service Administrator"
+    ],
+    [
+      "Caleb",
+      "Kim",
+      2,
+      "Regional Supervisor"
+    ],
+    [
+      "Leona",
+      "Marsh",
+      3,
+      "Store Manager"
+    ],
+    [
+      "Owen",
+      "Nolan",
+      3,
+      "Inventory Analyst"
+    ],
+    [
+      "Priya",
+      "Olsen",
+      3,
+      "Buyer"
+    ],
+    [
+      "Drew",
+      "Palmer",
+      4,
+      "Creative Director"
+    ],
+    [
+      "Mae",
+      "Quinn",
+      4,
+      "Project Coordinator"
+    ],
+    [
+      "Jonah",
+      "Reed",
+      5,
+      "Practice Administrator"
+    ],
+    [
+      "Talia",
+      "Stone",
+      5,
+      "Records Manager"
+    ],
+    [
+      "Emmett",
+      "Tran",
+      6,
+      "Production Planner"
+    ],
+    [
+      "Lina",
+      "Underwood",
+      6,
+      "Quality Coordinator"
+    ],
+    [
+      "Miles",
+      "Vega",
+      7,
+      "Route Manager"
+    ],
+    [
+      "Anika",
+      "Ward",
+      7,
+      "Client Services Lead"
+    ],
+    [
+      "Felix",
+      "Xu",
+      8,
+      "Engagement Manager"
+    ],
+    [
+      "Cora",
+      "Young",
+      8,
+      "Business Analyst"
+    ],
+    [
+      "Nico",
+      "Zane",
+      9,
+      "Plant Coordinator"
+    ],
+    [
+      "Esme",
+      "Archer",
+      9,
+      "Sourcing Manager"
+    ],
+    [
+      "Hugo",
+      "Bell",
+      10,
+      "Program Director"
+    ],
+    [
+      "Rina",
+      "Cole",
+      10,
+      "Learning Coordinator"
+    ],
+    [
+      "Silas",
+      "Dunn",
+      11,
+      "Lab Manager"
+    ],
+    [
+      "Zoe",
+      "Evans",
+      11,
+      "Research Coordinator"
+    ],
+    [
+      "Amir",
+      "Flores",
+      6,
+      "Account Coordinator"
+    ],
+    [
+      "Wren",
+      "Gibson",
+      7,
+      "Operations Analyst"
+    ],
+    [
+      "Priya",
+      "Natarajan",
+      12,
+      "Director of Patient Access"
+    ],
+    [
+      "Marcus",
+      "Webb",
+      13,
+      "Member Services Manager"
+    ],
+    [
+      "Elena",
+      "Vasquez",
+      14,
+      "Grid Operations Supervisor"
+    ],
+    [
+      "Dana",
+      "Whitfield",
+      15,
+      "City Clerk"
+    ],
+    [
+      "Tom",
+      "Okafor",
+      16,
+      "Plant Maintenance Lead"
+    ],
+    [
+      "Rosa",
+      "Delgado",
+      17,
+      "Store Operations Manager"
+    ],
+    [
+      "Jae",
+      "Park",
+      18,
+      "Customer Success Lead"
+    ],
+    [
+      "Nina",
+      "Kowalski",
+      19,
+      "Talent Operations Director"
+    ],
+    [
+      "Samuel",
+      "Greer",
+      20,
+      "Contracting Officer Representative"
+    ],
+    [
+      "Harper",
+      "Lindqvist",
+      21,
+      "HR Benefits Administrator"
+    ]
   ],
   "cases": [
-    ["Replacement toner shipment delayed", 0, 0, 1, 0, 0, 0],
-    ["Invoice includes duplicate service line", 1, 3, 2, 1, 1, 0],
-    ["Mobile workstation cart wheel damaged", 2, 6, 0, 2, 2, 0],
-    ["Bulk paper order quantity mismatch", 3, 9, 1, 1, 0, 0],
-    ["Shared proof link cannot be opened", 4, 12, 2, 2, 1, 0],
-    ["Archive box labels arrived misaligned", 5, 14, 0, 0, 2, 0],
-    ["Control panel intermittently restarts", 6, 16, 1, 2, 1, 0],
-    ["Delivery window needs adjustment", 7, 18, 2, 0, 0, 0],
-    ["Workshop room booking conflict", 8, 20, 0, 1, 2, 0],
-    ["Fabric sample colors differ from order", 9, 22, 1, 0, 1, 0],
-    ["Course packet missing index pages", 10, 24, 2, 1, 0, 0],
-    ["Sensor kit calibration report unavailable", 11, 26, 0, 2, 2, 0],
-    ["Printer maintenance visit confirmation", 0, 1, 2, 2, 2, 0],
-    ["Desk assembly guide has unclear step", 1, 4, 0, 0, 0, 0],
-    ["Technician access instructions update", 2, 7, 1, 1, 1, 0],
-    ["Envelope stock backorder question", 3, 10, 2, 2, 2, 1],
-    ["Design review notes not synchronized", 4, 13, 0, 0, 0, 1],
-    ["Matter file shelf delivery complete", 5, 15, 1, 1, 1, 1],
-    ["Firmware package validation request", 6, 28, 2, 2, 2, 1],
-    ["Freight tracking status clarification", 7, 29, 0, 0, 0, 1],
-    ["Consulting workbook access restored", 8, 21, 1, 1, 1, 1],
-    ["Textile swatch replacement completed", 9, 23, 2, 2, 2, 1],
-    ["Training room signage no longer needed", 10, 25, 0, 0, 0, 2],
-    ["Prototype case pickup canceled", 11, 27, 1, 1, 1, 2]
+    [
+      "Replacement toner shipment delayed",
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+    ],
+    [
+      "Invoice includes duplicate service line",
+      1,
+      3,
+      2,
+      1,
+      1,
+      0
+    ],
+    [
+      "Mobile workstation cart wheel damaged",
+      2,
+      6,
+      0,
+      2,
+      2,
+      0
+    ],
+    [
+      "Bulk paper order quantity mismatch",
+      3,
+      9,
+      1,
+      1,
+      0,
+      0
+    ],
+    [
+      "Shared proof link cannot be opened",
+      4,
+      12,
+      2,
+      2,
+      1,
+      0
+    ],
+    [
+      "Archive box labels arrived misaligned",
+      5,
+      14,
+      0,
+      0,
+      2,
+      0
+    ],
+    [
+      "Control panel intermittently restarts",
+      6,
+      16,
+      1,
+      2,
+      1,
+      0
+    ],
+    [
+      "Delivery window needs adjustment",
+      7,
+      18,
+      2,
+      0,
+      0,
+      0
+    ],
+    [
+      "Workshop room booking conflict",
+      8,
+      20,
+      0,
+      1,
+      2,
+      0
+    ],
+    [
+      "Fabric sample colors differ from order",
+      9,
+      22,
+      1,
+      0,
+      1,
+      0
+    ],
+    [
+      "Course packet missing index pages",
+      10,
+      24,
+      2,
+      1,
+      0,
+      0
+    ],
+    [
+      "Sensor kit calibration report unavailable",
+      11,
+      26,
+      0,
+      2,
+      2,
+      0
+    ],
+    [
+      "Printer maintenance visit confirmation",
+      0,
+      1,
+      2,
+      2,
+      2,
+      0
+    ],
+    [
+      "Desk assembly guide has unclear step",
+      1,
+      4,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      "Technician access instructions update",
+      2,
+      7,
+      1,
+      1,
+      1,
+      0
+    ],
+    [
+      "Envelope stock backorder question",
+      3,
+      10,
+      2,
+      2,
+      2,
+      1
+    ],
+    [
+      "Design review notes not synchronized",
+      4,
+      13,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      "Matter file shelf delivery complete",
+      5,
+      15,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      "Firmware package validation request",
+      6,
+      28,
+      2,
+      2,
+      2,
+      1
+    ],
+    [
+      "Freight tracking status clarification",
+      7,
+      29,
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      "Consulting workbook access restored",
+      8,
+      21,
+      1,
+      1,
+      1,
+      1
+    ],
+    [
+      "Textile swatch replacement completed",
+      9,
+      23,
+      2,
+      2,
+      2,
+      1
+    ],
+    [
+      "Training room signage no longer needed",
+      10,
+      25,
+      0,
+      0,
+      0,
+      2
+    ],
+    [
+      "Prototype case pickup canceled",
+      11,
+      27,
+      1,
+      1,
+      1,
+      2
+    ],
+    [
+      "Prior authorization request pending beyond SLA",
+      12,
+      30,
+      0,
+      2,
+      2,
+      0
+    ],
+    [
+      "Patient intake forms failing to sync to records system",
+      12,
+      30,
+      0,
+      1,
+      1,
+      0
+    ],
+    [
+      "Disputed card transaction under investigation",
+      13,
+      31,
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      "Loan application stuck in underwriting review",
+      13,
+      31,
+      1,
+      2,
+      2,
+      1
+    ],
+    [
+      "Substation feeder fault flagged in telemetry export",
+      14,
+      32,
+      0,
+      1,
+      1,
+      0
+    ],
+    [
+      "Meter reading anomalies across district seven",
+      14,
+      32,
+      1,
+      2,
+      0,
+      1
+    ],
+    [
+      "Building permit application awaiting plan review",
+      15,
+      33,
+      1,
+      2,
+      2,
+      0
+    ],
+    [
+      "Records request backlog exceeds statutory deadline",
+      15,
+      33,
+      0,
+      1,
+      2,
+      0
+    ],
+    [
+      "Line three unplanned downtime from spindle vibration",
+      16,
+      34,
+      0,
+      0,
+      1,
+      1
+    ],
+    [
+      "Cold chain temperature excursion in produce section",
+      17,
+      35,
+      0,
+      1,
+      1,
+      0
+    ],
+    [
+      "License renewal quote requested before expiration",
+      18,
+      36,
+      1,
+      1,
+      2,
+      0
+    ],
+    [
+      "Contractor onboarding blocked on background check",
+      19,
+      37,
+      1,
+      2,
+      2,
+      0
+    ],
+    [
+      "Grant drawdown report rejected for missing form",
+      20,
+      38,
+      0,
+      1,
+      1,
+      0
+    ],
+    [
+      "Open enrollment benefits portal login failures",
+      21,
+      39,
+      0,
+      2,
+      1,
+      1
+    ]
   ]
 }

@@ -58,11 +58,11 @@ class BuildTests(unittest.TestCase):
         incidents = self.entities["incidents"]
         self.assertEqual(
             {state: sum(item["statecode"] == state for item in incidents) for state in range(3)},
-            {0: 15, 1: 7, 2: 2},
+            {0: 25, 1: 11, 2: 2},
         )
         self.assertEqual(
             {priority: sum(item["prioritycode"] == priority for item in incidents) for priority in range(1, 4)},
-            {1: 8, 2: 8, 3: 8},
+            {1: 17, 2: 13, 3: 8},
         )
         tasks = self.entities["tasks"]
         self.assertEqual(
@@ -72,7 +72,12 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(sum(item["directioncode"] for item in self.entities["emails"]), 30)
 
     def test_guid_and_etag_vectors(self) -> None:
-        first = self.entities["accounts"][0]
+        # Pin the algorithm via a stable logical record (output order is
+        # id-sorted, so positions shift as the tenant grows).
+        first = next(
+            row for row in self.entities["accounts"]
+            if row["accountnumber"] == "AST-1010"
+        )
         self.assertEqual(first["accountid"], "207fee26-8125-54c4-a95a-bb16c9d7d820")
         self.assertEqual(first["@odata.etag"], 'W/"63be617758126299309cf21b"')
         guid = re.compile(

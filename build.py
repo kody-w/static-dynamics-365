@@ -1482,7 +1482,10 @@ def build_expanded_records(
 
     assets = []
     for index in range(18):
-        account = accounts[index % len(accounts)]
+        # Assets follow the service history: each asset belongs to the
+        # account of the case it will serve (workorder[i] pairs asset[i]
+        # with incidents[i]), so the linkage holds for any account count.
+        account = accounts[source["cases"][index % len(source["cases"])][1]]
         account_contacts = [
             row for row in contacts if row["parentcustomerid"] == account["accountid"]
         ]
