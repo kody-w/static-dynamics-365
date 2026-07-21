@@ -81,10 +81,10 @@ test("activities combine every email and task with correct lifecycle labels", ()
 
 test("system views, display search, stable sort, selection, and paging are deterministic", () => {
   const activeCases = applySystemView(data.incidents, "incidents", "active", now);
-  assert.equal(activeCases.length, 15);
+  assert.equal(activeCases.length, 25);
   assert.equal(
     applySystemView(data.incidents, "incidents", "resolved", now).length,
-    7,
+    11,
   );
   const displaySearch = searchRows(
     data.incidents,
@@ -92,7 +92,7 @@ test("system views, display search, stable sort, selection, and paging are deter
     "high",
     (record, field, value) => (field === "prioritycode" && value === 1 ? "High" : value),
   );
-  assert.equal(displaySearch.length, 8);
+  assert.equal(displaySearch.length, 17);
   const tied = [
     { id: "b", value: "same" },
     { id: "a", value: "same" },
@@ -118,7 +118,7 @@ test("dashboards have distinct derived components", () => {
   assert.equal(customer.title, "Customer Service Dashboard");
   assert.equal(activity.title, "Service Activity Dashboard");
   assert.notDeepEqual(customer.cards, activity.cards);
-  assert.equal(customer.charts[0].values.reduce((sum, item) => sum + item.value, 0), 15);
+  assert.equal(customer.charts[0].values.reduce((sum, item) => sum + item.value, 0), 25);
   assert.equal(activity.charts[0].values.reduce((sum, item) => sum + item.value, 0), 60);
 });
 
@@ -505,13 +505,13 @@ test("Sales and Product New-form drafts rerender and save through real POST", as
 
 test("entity-specific active views honor every declared lifecycle vector", () => {
   const expectedCounts = {
-    accounts: 12,
+    accounts: 22,
     bookableresourcebookings: 6,
     bookableresources: 4,
     bookingstatuses: 5,
     connections: 40,
-    contacts: 28,
-    incidents: 15,
+    contacts: 38,
+    incidents: 25,
     invoices: 2,
     leads: 5,
     msdyn_customerassets: 18,
