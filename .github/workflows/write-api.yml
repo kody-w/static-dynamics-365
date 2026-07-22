@@ -44,7 +44,7 @@ jobs:
         run: python3 build.py
 
       - name: Run Python tests
-        run: python3 -m pytest tests/ -q
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
 
       - name: Run Node tests
         run: node --test tests/*.test.mjs
