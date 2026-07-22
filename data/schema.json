@@ -2843,7 +2843,7 @@
       "deletePolicy": "restrict",
       "entitySet": "incidents",
       "entityType": "StaticDynamics365.incident",
-      "expectedCount": 38,
+      "expectedCount": 39,
       "fields": {
         "caseorigincode": {
           "edmType": "Edm.Int32",

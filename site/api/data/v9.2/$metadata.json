@@ -2934,7 +2934,7 @@
         "customer-service",
         "field-service"
       ],
-      "count": 38,
+      "count": 39,
       "deletePolicy": "restrict",
       "entityType": "StaticDynamics365.incident",
       "key": "incidentid",
@@ -11027,7 +11027,7 @@
     }
   ],
   "namespace": "StaticDynamics365",
-  "schemaDigest": "dc434e3017c0afdd9b888180f94d6e23e87a8108fdef8ba93440575112e85398",
+  "schemaDigest": "b992658c0d9eb8787abc5327b000435552e3772d38a5f258328df031b91838a4",
   "schemaVersion": 3,
   "simulatorPolicies": [
     "Public-documentation compatibility subset; exact tenant metadata and privileges require later trial verification.",

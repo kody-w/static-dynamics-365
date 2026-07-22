@@ -1,6 +1,6 @@
 {
   "@odata.context": "https://crm.asterlane.example/api/data/v9.2/$metadata#incidents",
-  "@odata.count": 38,
+  "@odata.count": 39,
   "value": [
     {
       "@odata.etag": "W/\"8e41aa2e791779a935d73f8d\"",
@@ -417,6 +417,38 @@
       "statuscode@OData.Community.Display.V1.FormattedValue": "In Progress",
       "ticketnumber": "CAS-260106",
       "title": "Control panel intermittently restarts"
+    },
+    {
+      "@odata.etag": "W/\"e3c699afc8e962aa19d4ac3c\"",
+      "caseorigincode": 3,
+      "caseorigincode@OData.Community.Display.V1.FormattedValue": "Web",
+      "casetypecode": 2,
+      "casetypecode@OData.Community.Display.V1.FormattedValue": "Problem",
+      "createdon": "2026-01-09T06:00:00.000Z",
+      "customerid": "54da2520-5321-5883-bf4f-ef59792b8214",
+      "customerid@OData.Community.Display.V1.FormattedValue": "Harbor Lights Grocery",
+      "customeridname": "Harbor Lights Grocery",
+      "customeridtype": "accounts",
+      "description": "Customer reported: refrigeration unit alarm on aisle four. Follow-up details are entirely synthetic.",
+      "firstresponsesenton": "2026-01-09T10:00:00.000Z",
+      "incidentid": "58f0b34b-f80f-5d5b-9812-8a6f9656d651",
+      "modifiedon": "2026-01-09T14:00:00.000Z",
+      "ownerid": "13705832-1253-5bcd-afd8-c7a759a16d4d",
+      "ownerid@OData.Community.Display.V1.FormattedValue": "Casey Rivera",
+      "owneridname": "Casey Rivera",
+      "primarycontactid": "5a00c3e4-cbd0-5510-9ae4-8b61eca52081",
+      "primarycontactid@OData.Community.Display.V1.FormattedValue": "Rosa Delgado",
+      "primarycontactidname": "Rosa Delgado",
+      "prioritycode": 1,
+      "prioritycode@OData.Community.Display.V1.FormattedValue": "High",
+      "resolveby": "2026-01-12T06:00:00.000Z",
+      "resolvedon": null,
+      "statecode": 0,
+      "statecode@OData.Community.Display.V1.FormattedValue": "Active",
+      "statuscode": 1,
+      "statuscode@OData.Community.Display.V1.FormattedValue": "In Progress",
+      "ticketnumber": "CAS-260138",
+      "title": "Refrigeration unit alarm on aisle four"
     },
     {
       "@odata.etag": "W/\"b944bcac87fbcb5c4ebe2e9c\"",
