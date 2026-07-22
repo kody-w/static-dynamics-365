@@ -6,6 +6,12 @@ All notable project changes are documented here.
 
 ### Added
 
+- Write API (Issues bridge): `[SD365]` issues carrying a fenced `sd365-write/1.0` JSON command
+  are validated, applied to `data/source.json`, deterministically rebuilt, test-gated, committed,
+  and published by Pages — near-real-time CRUD for the static tenant with per-issue receipts.
+  Volume-dependent test expectations now derive from the authored source so accepted writes can
+  never break the gates.
+
 - Ten industry customer accounts (healthcare, credit union, energy cooperative, city and federal
   government, manufacturing, grocery retail, software, staffing, higher education) with matching
   contacts and fourteen vertical service cases, growing the tenant to 22 accounts, 40 contacts,

@@ -56,13 +56,16 @@ class BuildTests(unittest.TestCase):
             build.EXPECTED_COUNTS,
         )
         incidents = self.entities["incidents"]
+        # Derived from the authored source so Write API commits (which
+        # append cases) keep this invariant meaningful without re-pinning.
+        source_cases = build.load_source()["cases"]
         self.assertEqual(
             {state: sum(item["statecode"] == state for item in incidents) for state in range(3)},
-            {0: 25, 1: 11, 2: 2},
+            {state: sum(row[6] == state for row in source_cases) for state in range(3)},
         )
         self.assertEqual(
             {priority: sum(item["prioritycode"] == priority for item in incidents) for priority in range(1, 4)},
-            {1: 17, 2: 13, 3: 8},
+            {priority: sum(row[3] + 1 == priority for row in source_cases) for priority in range(1, 4)},
         )
         tasks = self.entities["tasks"]
         self.assertEqual(

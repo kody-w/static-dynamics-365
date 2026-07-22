@@ -1,0 +1,84 @@
+name: Write API (Issues bridge)
+
+# Near-real-time CRUD for a static tenant: an issue titled "[SD365] ..."
+# carrying a ```json sd365-write/1.0 command mutates data/source.json,
+# the deterministic build regenerates every fixture, both test suites
+# gate the change, and the push triggers the Pages deploy — so a write
+# becomes globally readable JSON in about a minute. No server.
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: write
+  issues: write
+
+# Writes are serialized — each rebuild derives from the previous commit.
+concurrency:
+  group: write-api
+  cancel-in-progress: false
+
+jobs:
+  write:
+    if: startsWith(github.event.issue.title, '[SD365]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Process write command
+        id: write
+        run: python3 scripts/process_write_issue.py --event-path "$GITHUB_EVENT_PATH"
+
+      - name: Rebuild deterministic fixtures
+        run: python3 build.py
+
+      - name: Run Python tests
+        run: python3 -m pytest tests/ -q
+
+      - name: Run Node tests
+        run: node --test tests/*.test.mjs
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ site/ registry.json
+          git commit -m "Write API: issue #${{ github.event.issue.number }} — ${{ github.event.issue.title }}"
+          git pull --rebase origin main
+          git push origin main
+
+      - name: Receipt — close issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat > receipt.md <<'RECEIPT'
+          **Write committed.** The global API redeploys in ~1 minute.
+
+          ```json
+          RECEIPT
+          echo '${{ steps.write.outputs.receipt }}' | python3 -m json.tool >> receipt.md
+          printf '```\n' >> receipt.md
+          gh issue comment ${{ github.event.issue.number }} --body-file receipt.md
+          gh issue edit ${{ github.event.issue.number }} --add-label committed || true
+          gh issue close ${{ github.event.issue.number }}
+
+      - name: Receipt — reject on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          receipt='${{ steps.write.outputs.receipt }}'
+          body="**Write rejected.** ${receipt:-The build or tests failed; nothing was committed.}"
+          gh issue comment ${{ github.event.issue.number }} --body "$body"
+          gh issue edit ${{ github.event.issue.number }} --add-label rejected || true

@@ -164,3 +164,39 @@ The runtime validates the complete generated seed envelope. Tenant identity, epo
 actions, apps, namespace, versions, policies, metadata context, fixture chains, and schema digest
 must match generated `TENANT_SCHEMA`/`TENANT_CONFIG`; `$metadata` is rebuilt authoritatively rather
 than trusted from caller input.
+
+## Write API (Issues bridge)
+
+The read API is static; writes ride GitHub Issues. Open an issue titled
+`[SD365] <anything>` whose body contains a fenced ```json command in the
+`sd365-write/1.0` shape (same field names the read API serves):
+
+```json
+{
+  "schema": "sd365-write/1.0",
+  "operation": "create",
+  "entity": "incidents",
+  "record": {
+    "title": "Refrigeration unit alarm on aisle 4",
+    "customeridname": "Harbor Lights Grocery",
+    "prioritycode": 1,
+    "caseorigincode": 3,
+    "casetypecode": 2,
+    "statecode": 0
+  }
+}
+```
+
+The `write-api` workflow validates the command, mutates `data/source.json`,
+reruns the deterministic build, gates on both test suites, commits, and the
+Pages deploy publishes the updated collections — the write is globally
+readable in about a minute. The workflow answers on the issue with a receipt
+(ids, ticket number, read URL) and closes it; invalid commands are rejected
+with the reason and nothing is committed.
+
+Supported in v1: `create` for `accounts` (must embed a `primarycontact`),
+`contacts`, and `incidents`; `update`/`delete` for `incidents`, addressed by
+`ticketnumber` (CAS-xxxxxx). Simulator policy: the original service history
+(cases paired with work orders and assets) cannot be deleted, and accounts/
+contacts are create-only because their source indexes are identity. Writes
+are serialized by a workflow concurrency group.

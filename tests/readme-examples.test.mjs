@@ -12,7 +12,7 @@ async function browserJson(relative) {
 
 test("README static browser fixture example executes from the site root", async () => {
   const accounts = await browserJson("./api/data/v9.2/accounts.json");
-  assert.equal(accounts["@odata.count"], 22);
+  assert.equal(accounts["@odata.count"], accounts.value.length);
   assert.equal(typeof accounts.value[0].name, "string");
 });
 
