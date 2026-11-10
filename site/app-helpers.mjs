@@ -989,7 +989,8 @@ export function dashboardComponents(data, now, dashboardId = "customer-service")
     }, 0n);
     const absolute = units < 0n ? -units : units;
     const text = absolute.toString().padStart(3, "0");
-    return `${units < 0n ? "-" : ""}$${text.slice(0, -2)}.${text.slice(-2)}`;
+    const whole = text.slice(0, -2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return `${units < 0n ? "-" : ""}$${whole}.${text.slice(-2)}`;
   };
   if (dashboardId === "sales-pipeline") {
     const open = data.opportunities.filter((record) => record.statecode === 0);

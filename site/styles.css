@@ -491,7 +491,19 @@ svg {
   min-height: 0;
   flex: 1;
   overflow: auto;
+  padding-bottom: 36px;
   background: var(--white);
+}
+
+/* Headings take focus after navigation for screen readers; no ring for that programmatic focus. */
+h1[tabindex="-1"]:focus,
+h1[tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+.sort-arrow {
+  margin-left: 4px;
+  color: var(--accent-700);
 }
 
 .loading-state,
@@ -670,6 +682,8 @@ svg {
 .data-grid input[type="checkbox"] {
   width: 16px;
   height: 16px;
+  margin: 0;
+  vertical-align: middle;
   accent-color: var(--accent-700);
 }
 

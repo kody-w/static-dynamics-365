@@ -1509,12 +1509,12 @@ test("shell declares exactly three business apps and app-prefixed routes", () =>
   );
   assert.deepEqual(pipeline.cards.slice(0, 2), [
     ["Open Opportunities", 7],
-    ["Pipeline Value", "$37275.00"],
+    ["Pipeline Value", "$37,275.00"],
   ]);
   assert.deepEqual(performance.cards.slice(0, 3), [
-    ["Won Revenue", "$50400.00"],
+    ["Won Revenue", "$50,400.00"],
     ["Paid Invoices", 2],
-    ["Paid Invoice Value", "$8401.00"],
+    ["Paid Invoice Value", "$8,401.00"],
   ]);
   assert.deepEqual(field.cards, [
     ["Unscheduled", 2],

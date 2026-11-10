@@ -679,7 +679,7 @@ function renderGrid(entity, records, title, subtitle = "") {
       state.sortKey === field ? (state.sortDirection === "asc" ? " ascending" : " descending") : "";
     const button = element("button", {
       type: "button",
-      text: `${label}${direction}`,
+      text: label,
       attributes: {
         "aria-label": `Sort by ${label}${direction}`,
       },
@@ -695,7 +695,10 @@ function renderGrid(entity, records, title, subtitle = "") {
         },
       },
     });
-    headerRow.append(element("th", { attributes: { scope: "col" } }, button));
+    if (direction) {
+      button.append(element("span", { className: "sort-arrow", text: state.sortDirection === "asc" ? "↑" : "↓", attributes: { "aria-hidden": "true" } }));
+    }
+    headerRow.append(element("th", { attributes: { scope: "col", "aria-sort": direction ? direction.trim() : null } }, button));
   }
   table.append(element("thead", {}, headerRow));
   const body = element("tbody");
