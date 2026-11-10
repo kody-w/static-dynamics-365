@@ -1072,7 +1072,7 @@ function editableField(field, definition) {
               ? formatUtc(value)
               : name === "prioritycode"
                 ? priorityLabel(value)
-                : value || "—",
+                : schemaField?.options?.find((entry) => entry.value === Number(value))?.label || value || "—",
           );
     return element("div", { className: `form-field${kind === "textarea" ? " full" : ""}` }, [
       labelNode,
@@ -1081,6 +1081,28 @@ function editableField(field, definition) {
         attributes: { id: `field-${name}` },
       }, readContent),
     ]);
+  }
+  if (schemaField?.options?.length) {
+    // Option sets read as their labels (Phone, Question, High); the stored value stays the number.
+    const select = element(
+      "select",
+      {
+        attributes: { id: `field-${name}`, name, required: required ? "" : null, "aria-required": required ? "true" : null },
+        dataset: { writable: "true", valueType: kind },
+        on: {
+          change: (event) => {
+            form.draft[name] = event.target.value === "" ? null : Number(event.target.value);
+            updateDirtyState();
+          },
+        },
+      },
+      [
+        value === "" || value === null ? element("option", { text: "—", attributes: { value: "" } }) : null,
+        ...schemaField.options.map((entry) => element("option", { text: entry.label, attributes: { value: String(entry.value) } })),
+      ].filter(Boolean),
+    );
+    select.value = value === "" || value === null ? "" : String(value);
+    return element("div", { className: "form-field" }, [labelNode, select]);
   }
   const inputTag = kind === "textarea" ? "textarea" : "input";
   const attributes = {
