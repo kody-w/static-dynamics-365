@@ -576,6 +576,14 @@ export function gridCodeLabel(entity, field, value, now = "", record = null) {
   ) {
     return formatUtc(value);
   }
+  const schemaField = TENANT_SCHEMA.entities[entity]?.fields?.[field];
+  if (schemaField?.edmType === "Edm.DateTimeOffset") return formatUtc(value);
+  const option = schemaField?.options?.find((entry) => entry.value === Number(value));
+  if (option && value !== null && value !== "") return option.label;
+  if (schemaField?.edmType === "Edm.Decimal" && /^-?\d+(\.\d+)?$/.test(String(value ?? ""))) {
+    const [whole, fraction] = String(value).split(".");
+    return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (fraction === undefined ? "" : `.${fraction}`);
+  }
   return value === null || value === undefined || value === "" ? "—" : String(value);
 }
 
