@@ -679,9 +679,9 @@ function renderGrid(entity, records, title, subtitle = "") {
       state.sortKey === field ? (state.sortDirection === "asc" ? " ascending" : " descending") : "";
     const button = element("button", {
       type: "button",
-      text: label,
       attributes: {
         "aria-label": `Sort by ${label}${direction}`,
+        title: label,
       },
       on: {
         click: () => {
@@ -695,6 +695,7 @@ function renderGrid(entity, records, title, subtitle = "") {
         },
       },
     });
+    button.append(element("span", { className: "th-label", text: label }));
     if (direction) {
       button.append(element("span", { className: "sort-arrow", text: state.sortDirection === "asc" ? "↑" : "↓", attributes: { "aria-hidden": "true" } }));
     }
