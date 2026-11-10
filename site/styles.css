@@ -501,7 +501,14 @@ h1[tabindex="-1"]:focus-visible {
   outline: none;
 }
 
+.th-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sort-arrow {
+  flex: none;
   margin-left: 4px;
   color: var(--accent-700);
 }
